@@ -4,10 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dodo_pharmacy_mobile_app/app/routes.dart';
 import 'package:dodo_pharmacy_mobile_app/data/app_state.dart';
 import 'package:dodo_pharmacy_mobile_app/data/mock_data.dart';
+import 'package:dodo_pharmacy_mobile_app/data/models.dart';
 
 void main() {
   testWidgets(
-      'paying from the paywall returns to the same exam screen, unlocked',
+      'paying from the paywall, then an admin approval, unlocks the exam',
       (tester) async {
     // A tall viewport so every screen's buttons are on-screen.
     tester.view.physicalSize = const Size(1200, 2800);
@@ -57,12 +58,18 @@ void main() {
     await tapText('Pay Now'); // -> pay method
     await tapText('Proceed to Receipt Upload'); // -> upload receipt
     await tapText('Tap to upload receipt'); // pick a file
-    await tapText('Submit Receipt'); // -> pending
+    await tapText('Submit Receipt'); // -> pending (awaiting admin review)
 
-    expect(find.textContaining('confirming'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 4)); // auto-confirm -> success
+    expect(find.textContaining('being reviewed'), findsOneWidget);
+    expect(state.pendingPaymentCount, 1);
+    expect(state.isUnlocked(pack.id), isFalse);
+
+    // Admin approves the receipt from the panel.
+    final req = state.paymentRequests.last;
+    state.decidePayment(req.id, PaymentStatus.approved);
     await settle();
 
+    // The pending screen reacts and moves on to the success screen.
     expect(state.isUnlocked(pack.id), isTrue);
     expect(find.text('Payment successful'), findsOneWidget);
 

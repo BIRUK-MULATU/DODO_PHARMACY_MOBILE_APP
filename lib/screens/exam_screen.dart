@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../app/routes.dart';
 import '../data/app_state.dart';
-import '../data/mock_data.dart';
 import '../data/models.dart';
 import '../theme/app_colors.dart';
 import '../widgets/animated_bits.dart';
@@ -31,7 +30,7 @@ class _ExamScreenState extends State<ExamScreen> {
   final Set<int> _correctSet = {};
 
   ExamPack get pack => widget.pack;
-  Question get q => MockData.questionAt(_index);
+  Question get q => AppStateScope.read(context).examQuestion(pack, _index);
   bool get answered => _answeredSet.contains(_index);
   int? get selected => _selected[_index];
 

@@ -18,6 +18,7 @@ class AuthScaffold extends StatelessWidget {
     required this.primary,
     required this.footer,
     this.beforePrimary,
+    this.showSocial = true,
   });
 
   final String hero;
@@ -26,6 +27,9 @@ class AuthScaffold extends StatelessWidget {
   final Widget primary;
   final Widget footer;
   final Widget? beforePrimary;
+
+  /// Show the "Or / Log in with google" block (login & sign-up only).
+  final bool showSocial;
 
   @override
   Widget build(BuildContext context) {
@@ -90,13 +94,15 @@ class AuthScaffold extends StatelessWidget {
                     delay: const Duration(milliseconds: 380),
                     child: primary,
                   ),
-                  const SizedBox(height: 18),
-                  const _OrDivider(),
-                  const SizedBox(height: 16),
-                  Entrance(
-                    delay: const Duration(milliseconds: 460),
-                    child: const GoogleButton(),
-                  ),
+                  if (showSocial) ...[
+                    const SizedBox(height: 18),
+                    const _OrDivider(),
+                    const SizedBox(height: 16),
+                    Entrance(
+                      delay: const Duration(milliseconds: 460),
+                      child: const GoogleButton(),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   Center(child: footer),
                 ],

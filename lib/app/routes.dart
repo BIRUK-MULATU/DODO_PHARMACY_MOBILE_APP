@@ -6,6 +6,7 @@ import '../screens/about_questions_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/ebook_screen.dart';
 import '../screens/exam_screen.dart';
+import '../screens/forgot_password_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/onboarding_screen.dart';
@@ -14,6 +15,11 @@ import '../screens/payment/payment_pending_screen.dart';
 import '../screens/payment/payment_prompt_screen.dart';
 import '../screens/payment/payment_success_screen.dart';
 import '../screens/payment/upload_receipt_screen.dart';
+import '../screens/admin/admin_home_screen.dart';
+import '../screens/admin/admin_packs_screen.dart';
+import '../screens/admin/admin_payments_screen.dart';
+import '../screens/admin/admin_question_form_screen.dart';
+import '../screens/admin/admin_questions_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/results_screen.dart';
 import '../screens/signup_screen.dart';
@@ -27,6 +33,7 @@ class AppRoutes {
   static const onboarding = '/onboarding';
   static const login = '/login';
   static const signup = '/signup';
+  static const forgotPassword = '/forgot-password';
   static const home = '/home';
   static const track = '/track';
   static const ebook = '/ebook';
@@ -40,6 +47,11 @@ class AppRoutes {
   static const payUpload = '/pay/upload';
   static const payPending = '/pay/pending';
   static const paySuccess = '/pay/success';
+  static const admin = '/admin';
+  static const adminQuestions = '/admin/questions';
+  static const adminQuestionForm = '/admin/questions/form';
+  static const adminPayments = '/admin/payments';
+  static const adminPacks = '/admin/packs';
 
   /// Switch between top-level sections (Home / Dashboard / E-Book / Profile)
   /// without stacking them: unwind to the app root, then push once.
@@ -68,6 +80,9 @@ class AppRoutes {
         break;
       case signup:
         page = const SignUpScreen();
+        break;
+      case forgotPassword:
+        page = const ForgotPasswordScreen();
         break;
       case home:
         page = const HomeScreen();
@@ -115,6 +130,22 @@ class AppRoutes {
         break;
       case paySuccess:
         page = PaymentSuccessScreen(pack: pack);
+        break;
+      case admin:
+        page = const AdminHomeScreen();
+        break;
+      case adminQuestions:
+        page = const AdminQuestionsScreen();
+        break;
+      case adminQuestionForm:
+        page = AdminQuestionFormScreen(
+            question: args is Question ? args : null);
+        break;
+      case adminPayments:
+        page = const AdminPaymentsScreen();
+        break;
+      case adminPacks:
+        page = const AdminPacksScreen();
         break;
       default:
         page = const SplashScreen();

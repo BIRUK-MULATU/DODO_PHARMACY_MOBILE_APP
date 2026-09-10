@@ -27,9 +27,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() {
-    AppStateScope.read(context).logIn();
+    // Any email starting with "admin" opens the admin panel.
+    final isAdmin =
+        _email.text.trim().toLowerCase().startsWith('admin');
+    AppStateScope.read(context).logIn(asAdmin: isAdmin);
     Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.track,
+      isAdmin ? AppRoutes.admin : AppRoutes.track,
       (route) => false,
     );
   }
@@ -52,14 +55,36 @@ class _LoginScreenState extends State<LoginScreen> {
           controller: _password,
           obscure: true,
         ),
-        const Align(
+        Align(
           alignment: Alignment.centerRight,
-          child: Text(
-            'Forgot password',
-            style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.ink),
+          child: GestureDetector(
+            onTap: () => Navigator.of(context)
+                .pushNamed(AppRoutes.forgotPassword),
+            behavior: HitTestBehavior.opaque,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                'Forgot password',
+                style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                    decoration: TextDecoration.underline),
+              ),
+            ),
           ),
         ),
       ],
+      beforePrimary: Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 4),
+        child: Text(
+          'Tip: sign in with an “admin…” email to open the admin panel.',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.ink.withValues(alpha: 0.55),
+          ),
+        ),
+      ),
       primary: PrimaryButton(
         label: 'Log in',
         style: DpButtonStyle.yellow,

@@ -181,6 +181,10 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
                   onPressed: _picked && remaining > 0
                       ? () {
                           state.registerUploadAttempt();
+                          state.submitPaymentRequest(
+                            pack: pack,
+                            bankCode: bank.code,
+                          );
                           Navigator.of(context).pushReplacementNamed(
                             AppRoutes.payPending,
                             arguments: pack,

@@ -67,9 +67,12 @@ class MockData {
     'Public Health & Pharmacoepidemiology',
   ];
 
-  /// A small pool that loops to simulate the 3000-question bank.
-  static const List<Question> questions = [
+  /// A small pool that loops to simulate the full question bank. The admin
+  /// panel adds to / edits this list (in memory) via [AppState].
+  static List<Question> seedQuestions() => [
     Question(
+      id: 'q-200',
+      packId: 'exit-3000',
       number: 200,
       total: 3000,
       prompt:
@@ -79,7 +82,6 @@ class MockData {
           'long-term urate-lowering agent for this patient?',
       options: ['Naproxen', 'Colchicine', 'Allopurinol', 'Probenecid'],
       correctIndex: 2,
-      answerLabel: 'C) Allopurinol',
       explanation:
           'Allopurinol is a xanthine oxidase inhibitor and the first-line urate-lowering '
           'therapy for long-term chronic gout management. NSAIDs like Naproxen and '
@@ -89,6 +91,8 @@ class MockData {
           'retention and deteriorate renal function.',
     ),
     Question(
+      id: 'q-201',
+      packId: 'exit-3000',
       number: 201,
       total: 3000,
       prompt:
@@ -101,7 +105,6 @@ class MockData {
         'Nitrofurantoin',
       ],
       correctIndex: 1,
-      answerLabel: 'B) Trimethoprim-sulfamethoxazole',
       explanation:
           'Trimethoprim-sulfamethoxazole strongly inhibits CYP2C9, the enzyme responsible '
           'for metabolising the more potent S-enantiomer of warfarin, and also displaces '
@@ -109,6 +112,8 @@ class MockData {
           'the INR, markedly increasing bleeding risk.',
     ),
     Question(
+      id: 'q-202',
+      packId: 'exit-3000',
       number: 202,
       total: 3000,
       prompt:
@@ -121,15 +126,25 @@ class MockData {
         'Crush the tablet if swallowing is difficult',
       ],
       correctIndex: 2,
-      answerLabel: 'C) Empty stomach, full glass of water, remain upright 30 minutes',
       explanation:
           'Oral bisphosphonates have very low bioavailability that is abolished by food, and '
           'they are corrosive to the oesophageal mucosa. Taking the dose on an empty stomach '
           'with plain water and remaining upright for at least 30 minutes maximises absorption '
           'and minimises the risk of oesophagitis and ulceration.',
     ),
+    Question(
+      id: 'q-coc-1',
+      packId: 'coc-2800',
+      number: 1,
+      total: 2800,
+      prompt:
+          'A community pharmacist receives a prescription for a child weighing 18 kg for '
+          'amoxicillin 40 mg/kg/day divided every 8 hours. What is the correct single dose?',
+      options: ['120 mg', '180 mg', '240 mg', '360 mg'],
+      correctIndex: 2,
+      explanation:
+          '40 mg/kg/day × 18 kg = 720 mg/day. Divided into three doses (every 8 hours) that '
+          'is 240 mg per dose.',
+    ),
   ];
-
-  static Question questionAt(int index) =>
-      questions[index % questions.length];
 }

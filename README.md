@@ -25,17 +25,40 @@ flutter analyze             # clean, no issues
 ## Screen flow
 
 ```
+login → "Forgot password" → reset password (email → demo code 1234 → new password) → login
+
 splash → onboarding → login / signup → track select ─┬─► home ──► about ──► exam ──► results
                                                      ├─► dashboard
                                                      ├─► e-book
                                                      └─► profile (edit / save)
 
-exam (free limit reached) → pay prompt → payment method → upload receipt → pending → payment success
+exam (free limit reached) → pay prompt → payment method → upload receipt → pending
+                                                       (waits for admin approval → payment success)
+
+login with an "admin…" email → admin panel → { questions CRUD · payment approvals · packs }
 ```
 
 `onGenerateRoute` in `lib/app/routes.dart` is the single source of navigation;
 routes that take an `ExamPack` fall back to the primary pack so any screen can be
 opened directly (deep links, `#/exam`, etc.).
+
+### Admin panel (`lib/screens/admin/`)
+
+Sign in with any email that starts with **`admin`** (e.g. `admin@dodomed.com`) —
+`AppState.isAdmin` is set and login routes to `/admin` instead of the app.
+
+- **Questions** — full CRUD over `AppState.questions` (seeded from `MockData`):
+  list with search + pack filter, add/edit form (pack, number, prompt, 4 options
+  with a tap-to-mark-correct radio, explanation), delete with confirmation. The
+  exam reads live from `AppState.examQuestion(pack, i)`, so edits show immediately.
+- **Payment requests** — every uploaded receipt becomes a `PaymentRequest`
+  (`pending`). Admin **Approve** unlocks the pack for that user; **Reject** marks
+  it rejected. The user's *pending* screen listens to `AppState` and moves to the
+  success screen the moment its request is approved (or shows a "rejected — try
+  again" state).
+- **Exam packs** — read-only overview (price, free limit, authored count).
+
+Covered by `test/admin_test.dart` and `test/payment_flow_test.dart`.
 
 ### Free-question paywall + payment flow
 

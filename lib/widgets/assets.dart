@@ -1,6 +1,5 @@
 class Img {
   Img._();
-  static const onboardingHero = 'assets/images/onboarding_hero.png';
   static const loginHero = 'assets/images/login_hero.png';
   static const signupHero = 'assets/images/signup_hero.png';
   static const payHero = 'assets/images/pay_hero.png';

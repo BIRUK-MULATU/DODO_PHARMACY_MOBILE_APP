@@ -61,7 +61,6 @@ void main() {
     );
   });
   testWidgets('pay pending', (tester) async {
-    // Route the auto-confirmation somewhere harmless.
     await tester.pumpWidget(
       AppStateScope(
         state: AppState(),
@@ -74,9 +73,8 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 700));
+    expect(find.textContaining('being reviewed'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    // Drain the confirmation timer so it doesn't outlive the test.
-    await tester.pump(const Duration(seconds: 4));
   });
   testWidgets('pay success', (t) => _pump(t, PaymentSuccessScreen(pack: pack)));
 }
