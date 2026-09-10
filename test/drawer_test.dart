@@ -44,8 +44,25 @@ void main() {
     expect(inDrawer('Profile'), findsOneWidget);
     expect(inDrawer('Dashboard'), findsOneWidget);
     expect(inDrawer('E-Book'), findsOneWidget);
+    expect(inDrawer('About'), findsOneWidget);
     expect(inDrawer('Log Out'), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    // "About" opens the app-info page.
+    await tester.tap(inDrawer('About'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    expect(find.text('DODOMED'), findsOneWidget);
+    expect(find.textContaining('study companion'), findsOneWidget);
+    nav.pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    // Re-open the drawer for the next step.
+    await tester.tap(find.byIcon(Icons.menu).first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 700));
 
     // Tap through to Dashboard.
     await tester.tap(inDrawer('Dashboard'));

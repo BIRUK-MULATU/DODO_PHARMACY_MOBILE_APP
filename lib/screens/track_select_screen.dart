@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../app/routes.dart';
 import '../data/app_state.dart';
-import '../data/models.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_drawer.dart';
-import '../widgets/assets.dart';
 import '../widgets/entrance.dart';
 import '../widgets/marquee_ticker.dart';
 import '../widgets/press_scale.dart';
@@ -17,9 +15,11 @@ class TrackSelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final tracks = state.tracks;
+    final firstName = state.profile.name.split(' ').first;
 
-    void pick(ExamTrack track) {
-      state.chooseTrack(track);
+    void pick(String trackId) {
+      state.chooseTrack(trackId);
       Navigator.of(
         context,
       ).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
@@ -35,10 +35,10 @@ class TrackSelectScreen extends StatelessWidget {
               height: 250,
               child: WaveHeader(
                 height: 250,
-                greeting: 'Hello! Aster!',
+                greeting: 'Hello! $firstName!',
                 headline: 'What would you like to learn to day?',
                 onMenu: () => Scaffold.of(context).openDrawer(),
-                avatar: const AssetImage(Img.avatar),
+                avatar: AssetImage(state.profile.avatar),
                 onAvatarTap: () =>
                     AppRoutes.goToSection(context, AppRoutes.profile),
                 trailingLogo: true,
@@ -49,23 +49,17 @@ class TrackSelectScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               sliver: SliverList.list(
                 children: [
-                  Entrance(
-                    delay: const Duration(milliseconds: 120),
-                    child: _TrackCard(
-                      figure: Img.pharmacist,
-                      label: 'Pharmacy',
-                      onTap: () => pick(ExamTrack.pharmacy),
+                  for (var i = 0; i < tracks.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 16),
+                    Entrance(
+                      delay: Duration(milliseconds: 120 + i * 120),
+                      child: _TrackCard(
+                        figure: tracks[i].figure,
+                        label: tracks[i].name,
+                        onTap: () => pick(tracks[i].id),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Entrance(
-                    delay: const Duration(milliseconds: 240),
-                    child: _TrackCard(
-                      figure: Img.nurse,
-                      label: 'Nursing',
-                      onTap: () => pick(ExamTrack.nursing),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -113,15 +107,25 @@ class _TrackCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Image.asset(
-                      figure,
-                      height: c.maxHeight,
-                      fit: BoxFit.contain,
+                  if (figure.isNotEmpty)
+                    Align(
                       alignment: Alignment.bottomCenter,
+                      child: Image.asset(
+                        figure,
+                        height: c.maxHeight,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.bottomCenter,
+                      ),
+                    )
+                  else
+                    Align(
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.school_rounded,
+                        size: w * 0.34,
+                        color: AppColors.ink.withValues(alpha: 0.35),
+                      ),
                     ),
-                  ),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(

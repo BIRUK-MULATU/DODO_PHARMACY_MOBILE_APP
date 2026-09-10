@@ -32,6 +32,7 @@ class AppDrawer extends StatelessWidget {
       if (state.isAdmin)
         _DrawerItem(
             Icons.admin_panel_settings_rounded, 'Admin panel', AppRoutes.admin),
+      _DrawerItem(Icons.info_outline_rounded, 'About', AppRoutes.aboutApp),
     ];
 
     return Drawer(
@@ -91,8 +92,8 @@ class AppDrawer extends StatelessWidget {
                         border: Border.all(
                             color: AppColors.ink.withValues(alpha: 0.7),
                             width: 2),
-                        image: const DecorationImage(
-                          image: AssetImage(Img.avatar),
+                        image: DecorationImage(
+                          image: AssetImage(state.profile.avatar),
                           fit: BoxFit.cover,
                         ),
                       ),

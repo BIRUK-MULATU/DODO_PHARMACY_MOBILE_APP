@@ -4,38 +4,124 @@ import 'models.dart';
 class MockData {
   MockData._();
 
-  static const List<ExamPack> examPacks = [
-    ExamPack(
-      id: 'exit-3000',
-      title: '3000  Exit Question Sample Exam',
-      image: 'assets/images/home_banner_1.png',
-      questionCount: 3000,
-      priceBirr: 550,
-      freeLimit: 5,
-    ),
-    ExamPack(
-      id: 'coc-2800',
-      title: '2800 COC Sample Question Exam',
-      image: 'assets/images/home_banner_2.png',
-      questionCount: 2800,
-      priceBirr: 450,
-      freeLimit: 5,
-    ),
+  /// Cut-out figures an admin can attach to a track card.
+  static const List<String> trackFigures = [
+    'assets/images/pharmacist.png',
+    'assets/images/nurse.png',
+    'assets/images/kid.png',
+    'assets/images/avatar.png',
   ];
 
-  static const EBook premiumBook = EBook(
-    title: 'Pharmacy COC Examiner — 2800 Questions',
-    priceBirr: 350,
-    cover: 'assets/images/book_cover.png',
-    subjects: [
-      'Pharmacology',
-      'Clinical Pharmacy',
-      'Public Health',
-      'Pharmaceutics',
-      'Pharmaceutical Chemistry',
-      'Biopharmaceutics',
-    ],
-  );
+  /// Cover images an admin can attach to an exam pack (bundled assets only —
+  /// there is no file upload in this build).
+  static const List<String> packImages = [
+    'assets/images/home_banner_1.png',
+    'assets/images/home_banner_2.png',
+    'assets/images/book_cover.png',
+    'assets/images/pay_hero.png',
+    'assets/images/celebrate_hero.png',
+  ];
+
+  /// Cover images an admin can attach to an e-book.
+  static const List<String> bookCovers = [
+    'assets/images/book_cover.png',
+    'assets/images/home_banner_1.png',
+    'assets/images/home_banner_2.png',
+    'assets/images/celebrate_hero.png',
+    'assets/images/pay_hero.png',
+  ];
+
+  /// Avatars the user can pick for their profile from their device.
+  static const List<String> avatarChoices = [
+    'assets/images/avatar.png',
+    'assets/images/pharmacist.png',
+    'assets/images/nurse.png',
+    'assets/images/kid.png',
+  ];
+
+  /// Seed tracks. The admin panel adds to / edits this list (in memory).
+  static List<Track> seedTracks() => [
+        Track(id: 'pharmacy', name: 'Pharmacy', figure: trackFigures[0]),
+        Track(id: 'nursing', name: 'Nursing', figure: trackFigures[1]),
+      ];
+
+  /// Seed exam packs. The admin panel adds to / edits this list (in memory).
+  static List<ExamPack> seedExamPacks() => [
+        ExamPack(
+          id: 'exit-3000',
+          trackId: 'pharmacy',
+          title: '3000 Exit Question Sample Exam',
+          image: 'assets/images/home_banner_1.png',
+          questionCount: 3000,
+          priceBirr: 550,
+          freeLimit: 5,
+        ),
+        ExamPack(
+          id: 'coc-2800',
+          trackId: 'pharmacy',
+          title: '2800 COC Sample Question Exam',
+          image: 'assets/images/home_banner_2.png',
+          questionCount: 2800,
+          priceBirr: 450,
+          freeLimit: 5,
+        ),
+      ];
+
+  /// Seed the premium book collection. The admin panel adds to / edits this
+  /// list (in memory).
+  static List<EBook> seedBooks() => [
+        EBook(
+          id: 'book-coc',
+          title: 'Pharmacy COC Examiner — 2800 Questions',
+          priceBirr: 350,
+          cover: 'assets/images/book_cover.png',
+          freePages: 4,
+          subjects: const [
+            'Pharmacology',
+            'Clinical Pharmacy',
+            'Public Health',
+            'Pharmaceutics',
+            'Pharmaceutical Chemistry',
+            'Biopharmaceutics',
+          ],
+          pages: const [
+            'Chapter 1 — How to use this book\n\n'
+                'This guide follows the current national COC blueprint. Each '
+                'chapter opens with a one-page summary, then works through '
+                'exam-style questions with full explanations. Read the first '
+                'few pages free; unlock the rest to get all 2,800 questions.',
+            'Chapter 2 — Pharmacology essentials\n\n'
+                'Receptor theory, agonists and antagonists, dose–response '
+                'curves, therapeutic index. Know the difference between '
+                'competitive and non-competitive antagonism and how each '
+                'shifts the dose–response curve.',
+            'Chapter 3 — Autonomic drugs\n\n'
+                'Cholinergics, anticholinergics, adrenergics and blockers. '
+                'Focus on the clinical uses and the classic adverse-effect '
+                'clusters (dry mouth, blurred vision, urinary retention for '
+                'antimuscarinics).',
+            'Chapter 4 — Cardiovascular pharmacology\n\n'
+                'ACE inhibitors, ARBs, beta-blockers, calcium channel '
+                'blockers, diuretics. Heart-failure guideline therapy and the '
+                'monitoring each class needs (potassium, renal function).',
+            'Chapter 5 — Antimicrobials\n\n'
+                'Beta-lactams, macrolides, fluoroquinolones, aminoglycosides. '
+                'Spectra, key interactions (warfarin + co-trimoxazole), and '
+                'the counselling points for each class.',
+            'Chapter 6 — Endocrine & metabolic\n\n'
+                'Insulins and oral hypoglycaemics, thyroid replacement, '
+                'corticosteroids, bisphosphonates. Alendronate counselling: '
+                'empty stomach, full glass of water, stay upright 30 minutes.',
+            'Chapter 7 — Clinical pharmacy practice\n\n'
+                'Medication reconciliation, therapeutic drug monitoring, '
+                'renal and hepatic dose adjustment, and structured patient '
+                'counselling.',
+            'Chapter 8 — Public health & pharmacoepidemiology\n\n'
+                'Immunisation schedules, notifiable diseases, pharmacovigilance '
+                'and adverse-drug-reaction reporting, and basic study designs.',
+          ],
+        ),
+      ];
 
   static const List<BankAccount> banks = [
     BankAccount(

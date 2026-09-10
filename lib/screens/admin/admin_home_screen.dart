@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
 import '../../data/app_state.dart';
-import '../../data/mock_data.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
 import 'admin_scaffold.dart';
@@ -49,6 +48,30 @@ class AdminHomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           AdminTile(
+            icon: Icons.category_rounded,
+            title: 'Tracks',
+            subtitle:
+                '${state.tracks.length} fields of study · add / edit / remove',
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminTracks),
+          ),
+          const SizedBox(height: 12),
+          AdminTile(
+            icon: Icons.folder_special_rounded,
+            title: 'Exam packs',
+            subtitle:
+                '${state.examPacks.length} packs · title, track, price, free limit',
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminPacks),
+          ),
+          const SizedBox(height: 12),
+          AdminTile(
+            icon: Icons.menu_book_rounded,
+            title: 'E-books',
+            subtitle:
+                '${state.books.length} in the collection · pages, free preview, price',
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminBooks),
+          ),
+          const SizedBox(height: 12),
+          AdminTile(
             icon: Icons.quiz_rounded,
             title: 'Questions',
             subtitle: 'Add, edit or remove exam questions',
@@ -61,13 +84,6 @@ class AdminHomeScreen extends StatelessWidget {
             subtitle: 'Approve or reject uploaded receipts',
             badge: state.pendingPaymentCount,
             onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminPayments),
-          ),
-          const SizedBox(height: 12),
-          AdminTile(
-            icon: Icons.folder_special_rounded,
-            title: 'Exam packs',
-            subtitle: '${MockData.examPacks.length} packs · price & free limit',
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminPacks),
           ),
           const SizedBox(height: 20),
           OutlinedButton.icon(

@@ -149,16 +149,20 @@ class WaveHeader extends StatelessWidget {
                           ),
                         if (title != null) ...[
                           const SizedBox(width: 10),
-                          Text(
-                            title!,
-                            style: const TextStyle(
-                              color: AppColors.yellow,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
+                          Expanded(
+                            child: Text(
+                              title!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.yellow,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
-                        ],
-                        const Spacer(),
+                        ] else
+                          const Spacer(),
                         if (avatar != null)
                           GestureDetector(
                             onTap: onAvatarTap,

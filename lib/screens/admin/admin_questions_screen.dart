@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
 import '../../data/app_state.dart';
-import '../../data/mock_data.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
 import 'admin_scaffold.dart';
@@ -29,10 +28,8 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
     }).toList()
       ..sort((a, b) => a.number.compareTo(b.number));
 
-    String packName(String id) => MockData.examPacks
-        .firstWhere((p) => p.id == id,
-            orElse: () => MockData.examPacks.first)
-        .title;
+    String packName(String id) =>
+        state.packById(id)?.title ?? '(no pack)';
 
     return AdminScaffold(
       title: 'Questions (${state.questions.length})',
@@ -75,7 +72,7 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
                   selected: _packFilter == 'all',
                   onTap: () => setState(() => _packFilter = 'all'),
                 ),
-                for (final p in MockData.examPacks)
+                for (final p in state.examPacks)
                   _Chip(
                     label: p.id,
                     selected: _packFilter == p.id,

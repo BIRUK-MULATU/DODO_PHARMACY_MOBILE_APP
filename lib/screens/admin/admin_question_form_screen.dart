@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_state.dart';
-import '../../data/mock_data.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
 import 'admin_scaffold.dart';
@@ -32,6 +31,7 @@ class _AdminQuestionFormScreenState extends State<AdminQuestionFormScreen> {
   void initState() {
     super.initState();
     final q = widget.question;
+    final packs = AppStateScope.read(context).examPacks;
     _prompt = TextEditingController(text: q?.prompt ?? '');
     _explanation = TextEditingController(text: q?.explanation ?? '');
     _number = TextEditingController(text: q?.number.toString() ?? '');
@@ -40,7 +40,7 @@ class _AdminQuestionFormScreenState extends State<AdminQuestionFormScreen> {
       (i) => TextEditingController(
           text: (q != null && i < q.options.length) ? q.options[i] : ''),
     );
-    _packId = q?.packId ?? MockData.examPacks.first.id;
+    _packId = q?.packId ?? (packs.isNotEmpty ? packs.first.id : '');
     _correct = q?.correctIndex ?? 0;
   }
 
@@ -58,7 +58,13 @@ class _AdminQuestionFormScreenState extends State<AdminQuestionFormScreen> {
   void _save() {
     if (!_formKey.currentState!.validate()) return;
     final state = AppStateScope.read(context);
-    final pack = MockData.examPacks.firstWhere((p) => p.id == _packId);
+    final pack = state.packById(_packId);
+    if (pack == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick an exam pack first')),
+      );
+      return;
+    }
     final opts = _options.map((c) => c.text.trim()).toList();
 
     if (_isEdit) {
@@ -96,6 +102,7 @@ class _AdminQuestionFormScreenState extends State<AdminQuestionFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = AppStateScope.of(context);
     return AdminScaffold(
       title: _isEdit ? 'Edit question' : 'New question',
       onBack: () => Navigator.of(context).maybePop(),
@@ -105,12 +112,18 @@ class _AdminQuestionFormScreenState extends State<AdminQuestionFormScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
           children: [
             _label('Exam pack'),
+            if (state.examPacks.isEmpty)
+              const Text(
+                'No packs yet — add one under “Exam packs” first.',
+                style: TextStyle(color: AppColors.wrong),
+              ),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
-                for (final p in MockData.examPacks)
+                for (final p in state.examPacks)
                   ChoiceChip(
-                    label: Text(p.id),
+                    label: Text('${p.title} · ${p.id}'),
                     selected: _packId == p.id,
                     selectedColor: AppColors.ink,
                     labelStyle: TextStyle(

@@ -8,7 +8,7 @@ import 'package:dodo_pharmacy_mobile_app/screens/exam_screen.dart';
 void main() {
   testWidgets('exam locks after the free questions and offers a payment button',
       (tester) async {
-    final pack = MockData.examPacks.first;
+    final pack = MockData.seedExamPacks().first;
     expect(pack.freeLimit, 5);
 
     await tester.pumpWidget(

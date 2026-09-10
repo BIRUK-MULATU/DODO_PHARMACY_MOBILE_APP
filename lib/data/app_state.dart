@@ -2,13 +2,16 @@ import 'package:flutter/widgets.dart';
 
 import 'mock_data.dart';
 import 'models.dart';
+import 'pdf_store.dart';
 
 /// App-wide state held in memory. Exposed to the widget tree through
 /// [AppStateScope]. No backend — everything resets on restart.
 class AppState extends ChangeNotifier {
   bool loggedIn = false;
   bool isAdmin = false;
-  ExamTrack track = ExamTrack.pharmacy;
+
+  /// The track (field of study) the learner is currently browsing.
+  String trackId = 'pharmacy';
 
   Profile profile = Profile(
     name: 'Aster Ali',
@@ -17,6 +20,15 @@ class AppState extends ChangeNotifier {
     password: '12345',
     phone: '+251913623093',
   );
+
+  /// The live tracks. Seeded from [MockData]; the admin panel mutates it.
+  final List<Track> tracks = MockData.seedTracks();
+
+  /// The live exam packs. Seeded from [MockData]; the admin panel mutates it.
+  final List<ExamPack> examPacks = MockData.seedExamPacks();
+
+  /// The live premium book collection. Seeded from [MockData]; admin CRUD.
+  final List<EBook> books = MockData.seedBooks();
 
   /// The live question bank. Seeded from [MockData]; the admin panel mutates it.
   final List<Question> questions = MockData.seedQuestions();
@@ -50,8 +62,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void chooseTrack(ExamTrack value) {
-    track = value;
+  void chooseTrack(String id) {
+    trackId = id;
     notifyListeners();
   }
 
@@ -59,6 +71,139 @@ class AppState extends ChangeNotifier {
     profile = value;
     notifyListeners();
   }
+
+  void setAvatar(String assetPath) {
+    profile.avatar = assetPath;
+    notifyListeners();
+  }
+
+  // --- Tracks (admin CRUD) ---------------------------------------------
+
+  Track? trackById(String id) {
+    for (final t in tracks) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  String trackName(String id) => trackById(id)?.name ?? '—';
+
+  List<ExamPack> packsForTrack(String trackId) =>
+      examPacks.where((p) => p.trackId == trackId).toList();
+
+  /// Packs shown to the learner for the track they picked. Falls back to every
+  /// pack so the app is never empty if a track was removed.
+  List<ExamPack> get visiblePacks {
+    final scoped = packsForTrack(trackId);
+    return scoped.isNotEmpty ? scoped : examPacks;
+  }
+
+  String newTrackId() => _newId('track');
+
+  void addTrack(Track t) {
+    tracks.add(t);
+    notifyListeners();
+  }
+
+  void updateTrack(Track t) {
+    final i = tracks.indexWhere((e) => e.id == t.id);
+    if (i != -1) {
+      tracks[i] = t;
+      notifyListeners();
+    }
+  }
+
+  /// Removes a track together with its packs and their questions.
+  void deleteTrack(String id) {
+    tracks.removeWhere((t) => t.id == id);
+    final removedPackIds =
+        examPacks.where((p) => p.trackId == id).map((p) => p.id).toSet();
+    examPacks.removeWhere((p) => removedPackIds.contains(p.id));
+    questions.removeWhere((q) => removedPackIds.contains(q.packId));
+    if (trackId == id) {
+      trackId = tracks.isNotEmpty ? tracks.first.id : '';
+    }
+    notifyListeners();
+  }
+
+  // --- Exam packs (admin CRUD) ----------------------------------------
+
+  ExamPack? packById(String id) {
+    for (final p in examPacks) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
+
+  String newPackId() => _newId('pack');
+
+  void addPack(ExamPack pack) {
+    examPacks.add(pack);
+    notifyListeners();
+  }
+
+  void updatePack(ExamPack pack) {
+    final i = examPacks.indexWhere((e) => e.id == pack.id);
+    if (i != -1) {
+      examPacks[i] = pack;
+      notifyListeners();
+    }
+  }
+
+  /// Removes a pack together with its questions and any unlock/progress state.
+  void deletePack(String id) {
+    examPacks.removeWhere((p) => p.id == id);
+    questions.removeWhere((q) => q.packId == id);
+    _unlocked.remove(id);
+    _answered.remove(id);
+    _correct.remove(id);
+    notifyListeners();
+  }
+
+  // --- Premium books (admin CRUD) -----------------------------------
+
+  EBook? bookById(String id) {
+    for (final b in books) {
+      if (b.id == id) return b;
+    }
+    return null;
+  }
+
+  String newBookId() => _newId('book');
+
+  void addBook(EBook book) {
+    books.add(book);
+    notifyListeners();
+  }
+
+  void updateBook(EBook book) {
+    final i = books.indexWhere((e) => e.id == book.id);
+    if (i != -1) {
+      books[i] = book;
+      notifyListeners();
+    }
+  }
+
+  void deleteBook(String id) {
+    final gone = books.where((b) => b.id == id).toList();
+    books.removeWhere((b) => b.id == id);
+    _unlocked.remove(id);
+    for (final b in gone) {
+      deleteSavedPdf(b.pdfPath);
+    }
+    notifyListeners();
+  }
+
+  /// A synthetic [ExamPack] so a book can travel through the shared payment
+  /// flow (which keys everything on `id`, `title` and `priceBirr`).
+  ExamPack purchasableForBook(EBook book) => ExamPack(
+        id: book.id,
+        title: book.title,
+        image: book.cover,
+        questionCount: book.pageCount,
+        priceBirr: book.priceBirr,
+        freeLimit: book.freePages,
+      );
 
   int answered(String packId) => _answered[packId] ?? 0;
   int correct(String packId) => _correct[packId] ?? 0;
@@ -185,7 +330,8 @@ class AppState extends ChangeNotifier {
   int get accuracyPercent =>
       totalAnswered == 0 ? 0 : ((totalCorrect / totalAnswered) * 100).round();
 
-  ExamPack get primaryPack => MockData.examPacks.first;
+  ExamPack get primaryPack =>
+      examPacks.isNotEmpty ? examPacks.first : MockData.seedExamPacks().first;
 }
 
 class AppStateScope extends InheritedNotifier<AppState> {

@@ -33,7 +33,7 @@ void main() {
     }
 
     final state = AppState();
-    final pack = MockData.examPacks.first;
+    final pack = MockData.seedExamPacks().first;
     for (var i = 0; i < pack.freeLimit; i++) {
       state.recordAnswer(packId: pack.id, wasCorrect: true);
     }

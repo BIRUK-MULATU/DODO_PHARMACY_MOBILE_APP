@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/mock_data.dart';
 import '../data/models.dart';
+import '../screens/about_app_screen.dart';
 import '../screens/about_questions_screen.dart';
 import '../screens/dashboard_screen.dart';
+import '../screens/ebook_reader_screen.dart';
 import '../screens/ebook_screen.dart';
 import '../screens/exam_screen.dart';
 import '../screens/forgot_password_screen.dart';
@@ -15,11 +17,16 @@ import '../screens/payment/payment_pending_screen.dart';
 import '../screens/payment/payment_prompt_screen.dart';
 import '../screens/payment/payment_success_screen.dart';
 import '../screens/payment/upload_receipt_screen.dart';
+import '../screens/admin/admin_book_form_screen.dart';
+import '../screens/admin/admin_books_screen.dart';
 import '../screens/admin/admin_home_screen.dart';
+import '../screens/admin/admin_pack_form_screen.dart';
 import '../screens/admin/admin_packs_screen.dart';
 import '../screens/admin/admin_payments_screen.dart';
 import '../screens/admin/admin_question_form_screen.dart';
 import '../screens/admin/admin_questions_screen.dart';
+import '../screens/admin/admin_track_form_screen.dart';
+import '../screens/admin/admin_tracks_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/results_screen.dart';
 import '../screens/signup_screen.dart';
@@ -37,7 +44,9 @@ class AppRoutes {
   static const home = '/home';
   static const track = '/track';
   static const ebook = '/ebook';
+  static const ebookReader = '/ebook/reader';
   static const about = '/about';
+  static const aboutApp = '/about-app';
   static const exam = '/exam';
   static const results = '/results';
   static const dashboard = '/dashboard';
@@ -52,6 +61,11 @@ class AppRoutes {
   static const adminQuestionForm = '/admin/questions/form';
   static const adminPayments = '/admin/payments';
   static const adminPacks = '/admin/packs';
+  static const adminPackForm = '/admin/packs/form';
+  static const adminBooks = '/admin/books';
+  static const adminBookForm = '/admin/books/form';
+  static const adminTracks = '/admin/tracks';
+  static const adminTrackForm = '/admin/tracks/form';
 
   /// Switch between top-level sections (Home / Dashboard / E-Book / Profile)
   /// without stacking them: unwind to the app root, then push once.
@@ -64,8 +78,9 @@ class AppRoutes {
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     final args = settings.arguments;
-    // Fall back to the primary pack so deep links / direct navigation work.
-    final pack = args is ExamPack ? args : MockData.examPacks.first;
+    // Fall back to a seed pack / book so deep links / direct navigation work.
+    final pack = args is ExamPack ? args : MockData.seedExamPacks().first;
+    final book = args is EBook ? args : MockData.seedBooks().first;
 
     Widget page;
     switch (settings.name) {
@@ -93,6 +108,9 @@ class AppRoutes {
       case ebook:
         page = const EBookScreen();
         break;
+      case ebookReader:
+        page = EBookReaderScreen(book: book);
+        break;
       case dashboard:
         page = const DashboardScreen();
         break;
@@ -101,6 +119,9 @@ class AppRoutes {
         break;
       case about:
         page = AboutQuestionsScreen(pack: pack);
+        break;
+      case aboutApp:
+        page = const AboutAppScreen();
         break;
       case exam:
         page = ExamScreen(pack: pack);
@@ -146,6 +167,21 @@ class AppRoutes {
         break;
       case adminPacks:
         page = const AdminPacksScreen();
+        break;
+      case adminPackForm:
+        page = AdminPackFormScreen(pack: args is ExamPack ? args : null);
+        break;
+      case adminBooks:
+        page = const AdminBooksScreen();
+        break;
+      case adminBookForm:
+        page = AdminBookFormScreen(book: args is EBook ? args : null);
+        break;
+      case adminTracks:
+        page = const AdminTracksScreen();
+        break;
+      case adminTrackForm:
+        page = AdminTrackFormScreen(track: args is Track ? args : null);
         break;
       default:
         page = const SplashScreen();

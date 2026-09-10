@@ -8,7 +8,6 @@ import '../theme/app_colors.dart';
 import '../widgets/animated_bits.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/app_drawer.dart';
-import '../widgets/assets.dart';
 import '../widgets/entrance.dart';
 import '../widgets/marquee_ticker.dart';
 import '../widgets/press_scale.dart';
@@ -39,7 +38,7 @@ class DashboardScreen extends StatelessWidget {
                 height: 180,
                 title: 'Dashboard',
                 onMenu: () => Scaffold.of(context).openDrawer(),
-                avatar: const AssetImage(Img.avatar),
+                avatar: AssetImage(state.profile.avatar),
                 onAvatarTap: () =>
                     AppRoutes.goToSection(context, AppRoutes.profile),
               ),
@@ -81,6 +80,7 @@ class DashboardScreen extends StatelessWidget {
               sliver: SliverList.list(
                 children: staggered([
                   _ProgressHero(
+                    title: pack.title,
                     percent: pct,
                     onContinue: () => Navigator.of(context)
                         .pushNamed(AppRoutes.exam, arguments: pack),
@@ -159,7 +159,12 @@ class _StatCard extends StatelessWidget {
 }
 
 class _ProgressHero extends StatelessWidget {
-  const _ProgressHero({required this.percent, required this.onContinue});
+  const _ProgressHero({
+    required this.title,
+    required this.percent,
+    required this.onContinue,
+  });
+  final String title;
   final int percent;
   final VoidCallback onContinue;
 
@@ -177,8 +182,11 @@ class _ProgressHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('3000 Exit Exam Sample Question',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+          Text(title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
           const SizedBox(height: 6),
           CountUp(
             value: percent,

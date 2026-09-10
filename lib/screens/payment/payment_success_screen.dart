@@ -35,6 +35,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
     Navigator.of(context).popUntil((r) =>
         r.settings.name == AppRoutes.exam ||
         r.settings.name == AppRoutes.ebook ||
+        r.settings.name == AppRoutes.ebookReader ||
         r.isFirst);
   }
 

@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../app/routes.dart';
 import '../data/app_state.dart';
-import '../data/mock_data.dart';
 import '../data/models.dart';
 import '../theme/app_colors.dart';
 import '../widgets/animated_bits.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/app_drawer.dart';
-import '../widgets/assets.dart';
 import '../widgets/entrance.dart';
 import '../widgets/marquee_ticker.dart';
 import '../widgets/press_scale.dart';
@@ -20,6 +18,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final packs = state.visiblePacks;
 
     return Scaffold(
       backgroundColor: AppColors.yellow,
@@ -36,7 +35,7 @@ class HomeScreen extends StatelessWidget {
                 greeting: 'Hello! Aster!',
                 headline: '2027 Huge discount for COC Examiner',
                 onMenu: () => Scaffold.of(context).openDrawer(),
-                avatar: const AssetImage(Img.avatar),
+                avatar: AssetImage(state.profile.avatar),
                 onAvatarTap: () =>
                     AppRoutes.goToSection(context, AppRoutes.profile),
               ),
@@ -46,17 +45,27 @@ class HomeScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(18, 20, 18, 120),
               sliver: SliverList.list(
                 children: [
-                  for (var i = 0; i < MockData.examPacks.length; i++)
+                  if (packs.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 40),
+                      child: Text(
+                        'No exam packs yet.\nAn admin can add them from the '
+                        'admin panel.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  for (var i = 0; i < packs.length; i++)
                     Entrance(
                       delay: Duration(milliseconds: 120 + i * 130),
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 22),
                         child: _ExamBanner(
-                          pack: MockData.examPacks[i],
-                          progress: state.progress(MockData.examPacks[i]),
+                          pack: packs[i],
+                          progress: state.progress(packs[i]),
                           onTap: () => Navigator.of(context).pushNamed(
                             AppRoutes.about,
-                            arguments: MockData.examPacks[i],
+                            arguments: packs[i],
                           ),
                         ),
                       ),

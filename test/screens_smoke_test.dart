@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:dodo_pharmacy_mobile_app/data/app_state.dart';
 import 'package:dodo_pharmacy_mobile_app/data/mock_data.dart';
+import 'package:dodo_pharmacy_mobile_app/screens/about_app_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/about_questions_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/dashboard_screen.dart';
+import 'package:dodo_pharmacy_mobile_app/screens/ebook_reader_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/ebook_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/exam_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/home_screen.dart';
@@ -34,7 +36,7 @@ Future<void> _pump(WidgetTester tester, Widget screen) async {
 }
 
 void main() {
-  final pack = MockData.examPacks.first;
+  final pack = MockData.seedExamPacks().first;
 
   testWidgets('onboarding', (t) => _pump(t, const OnboardingScreen()));
   testWidgets('login', (t) => _pump(t, const LoginScreen()));
@@ -42,9 +44,12 @@ void main() {
   testWidgets('track', (t) => _pump(t, const TrackSelectScreen()));
   testWidgets('home', (t) => _pump(t, const HomeScreen()));
   testWidgets('ebook', (t) => _pump(t, const EBookScreen()));
+  testWidgets('ebook reader', (t) =>
+      _pump(t, EBookReaderScreen(book: MockData.seedBooks().first)));
   testWidgets('dashboard', (t) => _pump(t, const DashboardScreen()));
   testWidgets('profile', (t) => _pump(t, const ProfileScreen()));
   testWidgets('about', (t) => _pump(t, AboutQuestionsScreen(pack: pack)));
+  testWidgets('about app', (t) => _pump(t, const AboutAppScreen()));
   testWidgets('exam', (t) => _pump(t, ExamScreen(pack: pack)));
   testWidgets('results', (t) async {
     await _pump(
