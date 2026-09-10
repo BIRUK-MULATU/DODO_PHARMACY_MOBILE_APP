@@ -49,6 +49,17 @@ class AuthScaffold extends StatelessWidget {
                 padding: EdgeInsets.only(top: topPad + 8),
                 child: Stack(
                   children: [
+                    Entrance(
+                      offset: const Offset(0, -20),
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 30),
+                          child: Image.asset(hero, fit: BoxFit.contain),
+                        ),
+                      ),
+                    ),
+                    // Logo sits on top of the illustration so its opaque
+                    // (black) backdrop can never hide it.
                     Positioned(
                       top: 14,
                       right: 16,
@@ -57,17 +68,15 @@ class AuthScaffold extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppColors.yellow,
                           borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x55000000),
+                              blurRadius: 12,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: const DpLogo(size: 34),
-                      ),
-                    ),
-                    Entrance(
-                      offset: const Offset(0, -20),
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 30),
-                          child: Image.asset(hero, fit: BoxFit.contain),
-                        ),
                       ),
                     ),
                   ],
