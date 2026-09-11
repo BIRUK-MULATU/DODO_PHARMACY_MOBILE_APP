@@ -17,6 +17,7 @@ import '../screens/payment/payment_pending_screen.dart';
 import '../screens/payment/payment_prompt_screen.dart';
 import '../screens/payment/payment_success_screen.dart';
 import '../screens/payment/upload_receipt_screen.dart';
+import '../screens/admin/admin_about_screen.dart';
 import '../screens/admin/admin_book_form_screen.dart';
 import '../screens/admin/admin_books_screen.dart';
 import '../screens/admin/admin_home_screen.dart';
@@ -66,6 +67,7 @@ class AppRoutes {
   static const adminBookForm = '/admin/books/form';
   static const adminTracks = '/admin/tracks';
   static const adminTrackForm = '/admin/tracks/form';
+  static const adminAbout = '/admin/about';
 
   /// Switch between top-level sections (Home / Dashboard / E-Book / Profile)
   /// without stacking them: unwind to the app root, then push once.
@@ -182,6 +184,9 @@ class AppRoutes {
         break;
       case adminTrackForm:
         page = AdminTrackFormScreen(track: args is Track ? args : null);
+        break;
+      case adminAbout:
+        page = const AdminAboutScreen();
         break;
       default:
         page = const SplashScreen();

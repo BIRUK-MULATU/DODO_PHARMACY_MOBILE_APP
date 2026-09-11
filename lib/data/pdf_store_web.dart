@@ -4,3 +4,6 @@ import 'dart:typed_data';
 Future<String?> savePickedPdf(String bookId, Uint8List bytes) async => null;
 
 Future<void> deleteSavedPdf(String? path) async {}
+
+// Web never has a saved path — the model already holds the bytes directly.
+Future<Uint8List?> readSavedPdf(String? path) async => null;

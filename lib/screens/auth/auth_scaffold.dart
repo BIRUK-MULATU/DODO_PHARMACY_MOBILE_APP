@@ -156,21 +156,28 @@ class GoogleButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(29),
           border: Border.all(color: AppColors.ink, width: 2),
         ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('G',
-                style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.ink)),
-            SizedBox(width: 14),
-            Text('Log in with google',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.ink)),
-          ],
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('G',
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.ink)),
+              SizedBox(width: 12),
+              Flexible(
+                child: Text('Log in with google',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink)),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -191,13 +198,15 @@ class AuthFooterLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
       children: [
         Text(text,
             style:
                 const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
-        const SizedBox(width: 8),
         PressScale(
           onTap: onTap,
           child: Container(

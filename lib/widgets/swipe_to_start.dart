@@ -118,19 +118,24 @@ class _SwipeToStartState extends State<SwipeToStart>
               alignment: Alignment.center,
               children: [
                 // Label + chevrons, fading out as the thumb advances.
-                Opacity(
-                  opacity: (1 - _progress * 1.6).clamp(0.0, 1.0),
-                  child: Padding(
-                    padding: EdgeInsets.only(left: thumb * 0.7),
+                Positioned(
+                  left: thumb * 0.9,
+                  right: 14,
+                  child: Opacity(
+                    opacity: (1 - _progress * 1.6).clamp(0.0, 1.0),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          widget.label,
-                          style: const TextStyle(
-                            color: AppColors.yellow,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
+                        Flexible(
+                          child: Text(
+                            widget.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.yellow,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),

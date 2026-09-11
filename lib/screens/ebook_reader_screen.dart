@@ -264,11 +264,15 @@ class _ProgressRow extends StatelessWidget {
         Icon(unlocked ? Icons.lock_open_rounded : Icons.auto_stories,
             size: 18, color: AppColors.ink),
         const SizedBox(width: 8),
-        Text(
-          unlocked
-              ? 'Full access · $total pages'
-              : 'Preview · $visible of $total pages',
-          style: const TextStyle(fontWeight: FontWeight.w800),
+        Expanded(
+          child: Text(
+            unlocked
+                ? 'Full access · $total pages'
+                : 'Preview · $visible of $total pages',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
         ),
       ],
     );

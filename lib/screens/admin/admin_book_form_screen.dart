@@ -8,6 +8,7 @@ import '../../data/mock_data.dart';
 import '../../data/models.dart';
 import '../../data/pdf_store.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_image.dart';
 import 'admin_scaffold.dart';
 
 /// Add (when [book] is null) or edit a premium book. The admin can either type
@@ -249,35 +250,13 @@ class _AdminBookFormScreenState extends State<AdminBookFormScreen> {
             _label('Subjects (comma separated)'),
             _field(_subjects, hint: 'Pharmacology, Clinical Pharmacy, …'),
             const SizedBox(height: 16),
-            _label('Cover image'),
-            SizedBox(
-              height: 84,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (final img in MockData.bookCovers)
-                    GestureDetector(
-                      onTap: () => setState(() => _cover = img),
-                      child: Container(
-                        width: 64,
-                        margin: const EdgeInsets.only(right: 10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: _cover == img
-                                ? AppColors.ink
-                                : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(7),
-                          child: Image.asset(img, fit: BoxFit.cover),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            _label('Cover image — pick a preset or upload from your device'),
+            ImagePickerRow(
+              bundled: MockData.bookCovers,
+              selected: _cover,
+              onSelected: (v) => setState(() => _cover = v),
+              tileWidth: 64,
+              tileHeight: 84,
             ),
             const SizedBox(height: 20),
             _label('Book file (PDF)'),

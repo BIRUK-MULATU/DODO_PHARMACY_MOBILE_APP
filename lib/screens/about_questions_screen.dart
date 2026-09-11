@@ -5,6 +5,7 @@ import '../data/mock_data.dart';
 import '../data/models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_image.dart';
 import '../widgets/entrance.dart';
 import '../widgets/primary_button.dart';
 
@@ -24,7 +25,7 @@ class AboutQuestionsScreen extends StatelessWidget {
               SliverToBoxAdapter(
                 child: Stack(
                   children: [
-                    Image.asset(
+                    AppImage(
                       pack.image,
                       height: 300,
                       width: double.infinity,

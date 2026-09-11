@@ -4,6 +4,7 @@ import '../../app/routes.dart';
 import '../../data/app_state.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_image.dart';
 import 'admin_scaffold.dart';
 
 /// Full CRUD over the tracks (fields of study) shown on the "what would you
@@ -68,7 +69,7 @@ class AdminTracksScreen extends StatelessWidget {
                             child: t.figure.isEmpty
                                 ? const Icon(Icons.school_rounded,
                                     color: AppColors.yellow)
-                                : Image.asset(t.figure, fit: BoxFit.cover),
+                                : AppImage(t.figure, fit: BoxFit.cover),
                           ),
                           const SizedBox(width: 12),
                           Expanded(

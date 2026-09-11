@@ -4,6 +4,7 @@ import '../app/routes.dart';
 import '../data/app_state.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/app_image.dart';
 import '../widgets/entrance.dart';
 import '../widgets/marquee_ticker.dart';
 import '../widgets/press_scale.dart';
@@ -38,7 +39,7 @@ class TrackSelectScreen extends StatelessWidget {
                 greeting: 'Hello! $firstName!',
                 headline: 'What would you like to learn to day?',
                 onMenu: () => Scaffold.of(context).openDrawer(),
-                avatar: AssetImage(state.profile.avatar),
+                avatar: AppImage.provider(state.profile.avatar),
                 onAvatarTap: () =>
                     AppRoutes.goToSection(context, AppRoutes.profile),
                 trailingLogo: true,
@@ -110,7 +111,7 @@ class _TrackCard extends StatelessWidget {
                   if (figure.isNotEmpty)
                     Align(
                       alignment: Alignment.bottomCenter,
-                      child: Image.asset(
+                      child: AppImage(
                         figure,
                         height: c.maxHeight,
                         fit: BoxFit.contain,

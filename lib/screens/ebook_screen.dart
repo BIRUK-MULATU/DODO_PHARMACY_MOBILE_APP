@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/app_image.dart';
 import '../widgets/entrance.dart';
 import '../widgets/marquee_ticker.dart';
 import '../widgets/press_scale.dart';
@@ -35,7 +36,7 @@ class EBookScreen extends StatelessWidget {
                 greeting: 'Hello! ${state.profile.name.split(' ').first}!',
                 headline: 'Welcome to dodo premium book collection',
                 onMenu: () => Scaffold.of(context).openDrawer(),
-                avatar: AssetImage(state.profile.avatar),
+                avatar: AppImage.provider(state.profile.avatar),
                 onAvatarTap: () =>
                     AppRoutes.goToSection(context, AppRoutes.profile),
               ),
@@ -113,7 +114,7 @@ class _BookCard extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(book.cover,
+                      child: AppImage(book.cover,
                           width: 120, height: 150, fit: BoxFit.cover),
                     ),
                     const SizedBox(height: 6),

@@ -14,3 +14,7 @@ Future<String?> savePickedPdf(String bookId, Uint8List bytes) =>
 
 /// Best-effort removal of a previously saved PDF. No-op on web.
 Future<void> deleteSavedPdf(String? path) => impl.deleteSavedPdf(path);
+
+/// Reads back a PDF previously saved by [savePickedPdf]. Always `null` on
+/// web (there's no saved path there — the model keeps the bytes directly).
+Future<Uint8List?> readSavedPdf(String? path) => impl.readSavedPdf(path);

@@ -5,6 +5,7 @@ import '../data/mock_data.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/app_image.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/entrance.dart';
 import '../widgets/press_scale.dart';
@@ -103,59 +104,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickAvatar() async {
     final state = AppStateScope.read(context);
+    var pickError = false;
+
     final chosen = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: AppColors.yellow,
+      isScrollControlled: true,
+      showDragHandle: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Choose a picture',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 14,
-              runSpacing: 14,
-              children: [
-                for (final a in MockData.avatarChoices)
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context, a),
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: state.profile.avatar == a
-                              ? AppColors.ink
-                              : Colors.transparent,
-                          width: 3,
-                        ),
-                        image: DecorationImage(
-                          image: AssetImage(a),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Profile picture',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.ink,
+                    foregroundColor: AppColors.yellow,
+                    minimumSize: const Size.fromHeight(48),
                   ),
-              ],
-            ),
-          ],
+                  onPressed: () async {
+                    String? uri;
+                    try {
+                      uri = await pickImageAsDataUri(maxWidth: 600);
+                    } catch (_) {
+                      pickError = true;
+                    }
+                    if (sheetContext.mounted) {
+                      Navigator.pop(sheetContext, uri);
+                    }
+                  },
+                  icon: const Icon(Icons.add_a_photo_rounded, size: 18),
+                  label: const Text('Choose from device',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text('…or pick one of these',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: [
+                  if (AppImage.isUploaded(state.profile.avatar))
+                    _AvatarChoice(
+                      source: state.profile.avatar,
+                      selected: true,
+                      onTap: () =>
+                          Navigator.pop(sheetContext, state.profile.avatar),
+                    ),
+                  for (final a in MockData.avatarChoices)
+                    _AvatarChoice(
+                      source: a,
+                      selected: state.profile.avatar == a,
+                      onTap: () => Navigator.pop(sheetContext, a),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
+
+    if (!mounted) return;
+    if (pickError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't open the image picker.")),
+      );
+      return;
+    }
     if (chosen != null) {
       state.setAvatar(chosen);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile picture updated')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile picture updated')),
+      );
     }
   }
 
@@ -185,12 +218,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(22, 18, 22, 120),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- Avatar + name -------------------------------------
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Entrance(
                           child: GestureDetector(
@@ -198,8 +232,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Stack(
                               children: [
                                 Container(
-                                  width: 110,
-                                  height: 110,
+                                  width: 96,
+                                  height: 96,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(
@@ -207,14 +241,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       width: 4,
                                     ),
                                     image: DecorationImage(
-                                      image: AssetImage(state.profile.avatar),
+                                      image: AppImage.provider(
+                                          state.profile.avatar),
                                       fit: BoxFit.cover,
                                     ),
                                   ),
                                 ),
                                 Positioned(
-                                  right: 2,
-                                  bottom: 6,
+                                  right: 0,
+                                  bottom: 4,
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: const BoxDecoration(
@@ -224,7 +259,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     child: const Icon(
                                       Icons.camera_alt,
                                       color: AppColors.yellow,
-                                      size: 16,
+                                      size: 15,
                                     ),
                                   ),
                                 ),
@@ -232,117 +267,110 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 state.profile.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 26,
+                                  fontSize: 22,
                                   fontWeight: FontWeight.w900,
+                                  height: 1.15,
                                 ),
                               ),
+                              const SizedBox(height: 2),
                               Text(
                                 '@${state.profile.username}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.ink.withValues(alpha: 0.45),
+                                  color:
+                                      AppColors.ink.withValues(alpha: 0.45),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  PressScale(
-                                    onTap:
-                                        _editing ? _save : _startEditing,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 10,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.ink,
-                                        borderRadius:
-                                            BorderRadius.circular(22),
-                                      ),
-                                      child: Text(
-                                        _editing
-                                            ? 'Save Profile'
-                                            : 'Edit Profile',
-                                        style: const TextStyle(
-                                          color: AppColors.yellow,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  if (_editing) ...[
-                                    const SizedBox(width: 10),
-                                    PressScale(
-                                      onTap: _cancel,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 10,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(22),
-                                          border: Border.all(
-                                              color: AppColors.ink,
-                                              width: 1.5),
-                                        ),
-                                        child: const Text(
-                                          'Cancel',
-                                          style: TextStyle(
-                                            color: AppColors.ink,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
                               ),
                             ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
+                    // --- Edit / Save / Cancel ----------------------------
                     if (_editing)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _PillButton(
+                              label: 'Save',
+                              filled: true,
+                              onTap: _save,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _PillButton(
+                              label: 'Cancel',
+                              filled: false,
+                              onTap: _cancel,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      _PillButton(
+                        label: 'Edit Profile',
+                        filled: true,
+                        onTap: _startEditing,
+                      ),
+                    if (_editing) ...[
+                      const SizedBox(height: 12),
                       Text(
-                        'Tap the camera to change your picture. Edit any field '
+                        'Tap the camera to change your picture, edit any field '
                         'below, then Save.',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 12.5,
+                          height: 1.4,
                           color: AppColors.ink.withValues(alpha: 0.6),
                         ),
                       ),
+                    ],
                     if (_error != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          _error!,
-                          style: const TextStyle(
-                            color: AppColors.wrong,
-                            fontWeight: FontWeight.w700,
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.wrongFill.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _error!,
+                            style: const TextStyle(
+                              color: AppColors.wrong,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 24),
+                    // --- Fields -----------------------------------------
                     ...staggered([
                       for (final entry in _c.entries) ...[
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.only(bottom: 8),
                           child: Text(
                             entry.key,
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -359,15 +387,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ? TextInputType.phone
                                   : null,
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 18),
                       ],
                     ]),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PillButton extends StatelessWidget {
+  const _PillButton({
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      onTap: onTap,
+      child: Container(
+        height: 46,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: filled ? AppColors.ink : Colors.transparent,
+          borderRadius: BorderRadius.circular(23),
+          border: filled
+              ? null
+              : Border.all(color: AppColors.ink, width: 1.5),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: filled ? AppColors.yellow : AppColors.ink,
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarChoice extends StatelessWidget {
+  const _AvatarChoice({
+    required this.source,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String source;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: selected ? AppColors.ink : Colors.transparent,
+            width: 3,
+          ),
+          image: DecorationImage(
+            image: AppImage.provider(source),
+            fit: BoxFit.cover,
+          ),
         ),
       ),
     );

@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../widgets/animated_bits.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/app_image.dart';
 import '../widgets/entrance.dart';
 import '../widgets/marquee_ticker.dart';
 import '../widgets/press_scale.dart';
@@ -35,7 +36,7 @@ class HomeScreen extends StatelessWidget {
                 greeting: 'Hello! Aster!',
                 headline: '2027 Huge discount for COC Examiner',
                 onMenu: () => Scaffold.of(context).openDrawer(),
-                avatar: AssetImage(state.profile.avatar),
+                avatar: AppImage.provider(state.profile.avatar),
                 onAvatarTap: () =>
                     AppRoutes.goToSection(context, AppRoutes.profile),
               ),
@@ -108,7 +109,7 @@ class _ExamBanner extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.asset(pack.image, fit: BoxFit.cover),
+                    AppImage(pack.image, fit: BoxFit.cover),
                     const DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -140,11 +141,17 @@ class _ExamBanner extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('${(progress * 100).round()}% complete',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textOnYellow)),
+                        Flexible(
+                          child: Text('${(progress * 100).round()}% complete',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textOnYellow)),
+                        ),
+                        const SizedBox(width: 8),
                         const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text('Start ',
                                 style: TextStyle(

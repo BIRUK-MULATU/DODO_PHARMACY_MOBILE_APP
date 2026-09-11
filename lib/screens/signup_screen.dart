@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../app/routes.dart';
+import '../data/api_client.dart';
 import '../data/app_state.dart';
-import '../data/models.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/assets.dart';
@@ -22,6 +22,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
 
+  bool _loading = false;
+
   @override
   void dispose() {
     _email.dispose();
@@ -31,24 +33,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _signup() {
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _signup() async {
+    final email = _email.text.trim();
+    final password = _password.text;
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Enter an email and a password to sign up.');
+      return;
+    }
+    if (password != _confirm.text) {
+      _showError("Passwords don't match.");
+      return;
+    }
+
     final state = AppStateScope.read(context);
-    final current = state.profile;
-    state.updateProfile(
-      Profile(
-        name: current.name,
-        username: current.username,
-        email: _email.text.trim().isEmpty ? current.email : _email.text.trim(),
-        password:
-            _password.text.isEmpty ? current.password : _password.text,
-        phone: _phone.text.trim().isEmpty ? current.phone : _phone.text.trim(),
-      ),
-    );
-    state.logIn();
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.track,
-      (route) => false,
-    );
+    setState(() => _loading = true);
+    try {
+      // The form only collects email/phone/password — name and username
+      // keep the app's default profile identity, same as before there was a
+      // real backend to register them against.
+      await state.authSignUp(
+        name: state.profile.name,
+        username: state.profile.username,
+        email: email,
+        password: password,
+        phone: _phone.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.track,
+        (route) => false,
+      );
+    } on ApiException catch (e) {
+      if (mounted) _showError(e.message);
+    } catch (_) {
+      if (mounted) {
+        _showError("Couldn't reach the server. Check your connection and try again.");
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -87,9 +116,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
       ],
       primary: PrimaryButton(
-        label: 'Sign Up',
+        label: _loading ? 'Signing up…' : 'Sign Up',
         style: DpButtonStyle.yellow,
-        onPressed: _signup,
+        onPressed: _loading ? null : _signup,
       ),
       footer: AuthFooterLink(
         text: 'Already  have account?',

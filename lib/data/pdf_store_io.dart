@@ -23,3 +23,17 @@ Future<void> deleteSavedPdf(String? path) async {
     // best effort
   }
 }
+
+/// Reads back a PDF previously saved by [savePickedPdf] — used to sync it to
+/// the backend, since only the path (not the bytes) is kept on the model
+/// once it's on disk. Returns `null` if the file is gone/unreadable.
+Future<Uint8List?> readSavedPdf(String? path) async {
+  if (path == null || path.isEmpty) return null;
+  try {
+    final file = File(path);
+    if (!await file.exists()) return null;
+    return await file.readAsBytes();
+  } catch (_) {
+    return null;
+  }
+}

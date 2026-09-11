@@ -5,6 +5,7 @@ import '../../data/app_state.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/animated_bits.dart';
+import '../../widgets/app_image.dart';
 import '../../widgets/assets.dart';
 import '../../widgets/entrance.dart';
 import '../../widgets/press_scale.dart';
@@ -28,7 +29,27 @@ class UploadReceiptScreen extends StatefulWidget {
 }
 
 class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
-  bool _picked = false;
+  String? _receipt;
+  bool _picking = false;
+
+  Future<void> _pickReceipt() async {
+    if (_picking) return;
+    setState(() => _picking = true);
+    try {
+      final uri = await pickImageAsDataUri(maxWidth: 1400);
+      if (!mounted) return;
+      if (uri != null) setState(() => _receipt = uri);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Couldn't open the image picker. Try again.")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +58,7 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
     final remaining = UploadReceiptScreen.maxAttempts - used;
     final pack = widget.args.pack;
     final bank = widget.args.bank;
+    final picked = _receipt != null;
 
     return Scaffold(
       backgroundColor: AppColors.yellow,
@@ -105,9 +127,15 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Upload Attempts',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w800, fontSize: 16)),
+                          const Flexible(
+                            child: Text('Upload Attempts',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16)),
+                          ),
+                          const SizedBox(width: 8),
                           Text('$used/${UploadReceiptScreen.maxAttempts}',
                               style: const TextStyle(
                                   fontWeight: FontWeight.w800, fontSize: 16)),
@@ -131,46 +159,85 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
                 ),
                 const SizedBox(height: 16),
                 PressScale(
-                  onTap: () => setState(() => _picked = true),
+                  onTap: _picking ? null : _pickReceipt,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 220),
+                    clipBehavior: Clip.antiAlias,
                     height: 170,
                     decoration: BoxDecoration(
                       color: AppColors.yellowSoft.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: _picked ? AppColors.correct : AppColors.ink,
+                        color: picked ? AppColors.correct : AppColors.ink,
                         width: 2,
                         style: BorderStyle.solid,
                       ),
                     ),
-                    child: Center(
-                      child: _picked
-                          ? Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(Icons.check_circle,
-                                    color: AppColors.correct, size: 44),
-                                SizedBox(height: 8),
-                                Text('receipt_2027.jpg selected',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w700)),
-                              ],
-                            )
-                          : Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(Icons.cloud_upload,
-                                    color: Colors.blue, size: 44),
-                                SizedBox(height: 8),
-                                Text('Tap to upload receipt',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w800)),
-                                Text('JPG or PNG from your gallery',
-                                    style: TextStyle(fontSize: 12)),
-                              ],
-                            ),
-                    ),
+                    child: _picking
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.ink))
+                        : picked
+                            ? Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  AppImage(_receipt!, fit: BoxFit.cover),
+                                  Positioned.fill(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Colors.transparent,
+                                            Colors.black.withValues(
+                                                alpha: 0.55),
+                                          ],
+                                          stops: const [0.5, 1],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    right: 10,
+                                    top: 10,
+                                    child: CircleAvatar(
+                                      radius: 14,
+                                      backgroundColor: AppColors.correct,
+                                      child: Icon(Icons.check,
+                                          color: Colors.white, size: 16),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: 12,
+                                    right: 12,
+                                    bottom: 10,
+                                    child: Text(
+                                      'Receipt attached · tap to replace',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.cloud_upload,
+                                        color: Colors.blue, size: 44),
+                                    SizedBox(height: 8),
+                                    Text('Tap to upload receipt',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w800)),
+                                    Text('a photo or screenshot from your device',
+                                        style: TextStyle(fontSize: 12)),
+                                  ],
+                                ),
+                              ),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -178,12 +245,13 @@ class _UploadReceiptScreenState extends State<UploadReceiptScreen> {
                   label: 'Submit Receipt',
                   style: DpButtonStyle.outline,
                   trailingIcon: Icons.send_rounded,
-                  onPressed: _picked && remaining > 0
+                  onPressed: picked && remaining > 0
                       ? () {
                           state.registerUploadAttempt();
                           state.submitPaymentRequest(
                             pack: pack,
                             bankCode: bank.code,
+                            receiptImage: _receipt!,
                           );
                           Navigator.of(context).pushReplacementNamed(
                             AppRoutes.payPending,

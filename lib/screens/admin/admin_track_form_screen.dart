@@ -4,6 +4,7 @@ import '../../data/app_state.dart';
 import '../../data/mock_data.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_image.dart';
 import 'admin_scaffold.dart';
 
 /// Add (when [track] is null) or edit a track (field of study).
@@ -83,14 +84,14 @@ class _AdminTrackFormScreenState extends State<AdminTrackFormScreen> {
               ),
             ),
             const SizedBox(height: 18),
-            _label('Card figure (optional)'),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _figureOption('', label: 'None'),
-                for (final f in MockData.trackFigures) _figureOption(f),
-              ],
+            _label('Card figure — a preset, an upload, or none'),
+            ImagePickerRow(
+              bundled: MockData.trackFigures,
+              selected: _figure,
+              onSelected: (v) => setState(() => _figure = v),
+              allowNone: true,
+              tileWidth: 74,
+              tileHeight: 74,
             ),
             const SizedBox(height: 26),
             FilledButton(
@@ -106,32 +107,6 @@ class _AdminTrackFormScreenState extends State<AdminTrackFormScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _figureOption(String path, {String? label}) {
-    final selected = _figure == path;
-    return GestureDetector(
-      onTap: () => setState(() => _figure = path),
-      child: Container(
-        width: 74,
-        height: 74,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? AppColors.ink : Colors.black12,
-            width: selected ? 3 : 1,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: path.isEmpty
-            ? Center(
-                child: Text(label ?? 'None',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 12)))
-            : Image.asset(path, fit: BoxFit.cover),
       ),
     );
   }

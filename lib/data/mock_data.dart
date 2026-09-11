@@ -123,6 +123,35 @@ class MockData {
         ),
       ];
 
+  /// Seed content for the drawer "About" screen. Editable from the admin panel.
+  static AboutInfo seedAboutInfo() => AboutInfo(
+        version: '1.0.0',
+        intro:
+            'DODOMED is a study companion for the Ethiopian pharmacy exit exam '
+            'and the COC licensure exam. It brings the full question bank, '
+            'worked explanations, mock exams and premium reference books into '
+            'one app so you can prepare anywhere.',
+        features: [
+          '3,000+ exit-exam MCQs and 2,800+ COC questions, organised by '
+              'subject and past-paper trends',
+          'A step-by-step explanation for every question — why the answer is '
+              'right and why the others are wrong',
+          'Timed mock exams that mirror the real paper',
+          'Premium reference books, including full PDFs, readable in the app',
+          'A progress dashboard: accuracy, streaks and exam-readiness at a '
+              'glance',
+        ],
+        unlocking:
+            'A few questions and the first pages of every book are free. To '
+            'unlock everything you make a bank transfer and upload the receipt '
+            'in the app — our team confirms it (usually within a couple of '
+            'hours) and your access opens automatically.',
+        supportEmail: 'support@dodomed.et',
+        supportTelegram: '@dodomed',
+        supportPhone: '+251 91 000 0000',
+        footer: '© 2026 DODOMED · Made in Ethiopia',
+      );
+
   static const List<BankAccount> banks = [
     BankAccount(
       code: 'CBE',

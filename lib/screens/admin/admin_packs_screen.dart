@@ -4,6 +4,7 @@ import '../../app/routes.dart';
 import '../../data/app_state.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_image.dart';
 import 'admin_scaffold.dart';
 
 /// Full CRUD over the exam packs (e.g. "3000 Exit Question Sample Exam",
@@ -126,7 +127,7 @@ class _PackCard extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
+                    child: AppImage(
                       pack.image,
                       width: 54,
                       height: 54,

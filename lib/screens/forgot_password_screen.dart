@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/routes.dart';
+import '../data/api_client.dart';
 import '../data/app_state.dart';
 import '../data/models.dart';
 import '../theme/app_colors.dart';
@@ -9,8 +10,13 @@ import '../widgets/assets.dart';
 import '../widgets/primary_button.dart';
 import 'auth/auth_scaffold.dart';
 
-/// Simulated password reset (no backend): request a code for an email, then
-/// enter the code + a new password. The demo code is always `1234`.
+/// Password reset. There's no real mail service wired up, so — like before
+/// there was a backend — the "code" is a fixed, publicly-known demo value
+/// rather than something actually emailed. When a backend is reachable this
+/// updates the real account's password there (see
+/// `AppState.resetPasswordOnBackend`); if it isn't, it falls back to the
+/// original fully-local demo behaviour (only works for whichever profile is
+/// currently loaded).
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -27,6 +33,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _confirm = TextEditingController();
 
   bool _codeSent = false;
+  bool _loading = false;
   String? _error;
 
   @override
@@ -53,7 +60,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  void _reset() {
+  Future<void> _reset() async {
     if (_code.text.trim() != _demoCode) {
       setState(() => _error = 'Incorrect code. (Demo code is $_demoCode.)');
       return;
@@ -68,8 +75,39 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
 
     final state = AppStateScope.read(context);
-    if (state.profile.email.trim().toLowerCase() ==
-        _email.text.trim().toLowerCase()) {
+    final email = _email.text.trim();
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      // Tries the real backend first — this is what actually resets a real
+      // account's password, regardless of which profile happens to be
+      // loaded locally right now.
+      await state.resetPasswordOnBackend(
+        email: email,
+        code: _code.text.trim(),
+        newPassword: _password.text,
+      );
+    } on ApiException catch (e) {
+      // A real backend responded and rejected this — show its reason rather
+      // than silently falling back.
+      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _error = e.message);
+      return;
+    } catch (_) {
+      // No backend reachable at all — fall back to the original, fully-local
+      // demo behaviour so this screen still works without one running.
+      if (state.profile.email.trim().toLowerCase() != email.toLowerCase()) {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _error = "Couldn't reach the server to reset that account.";
+          });
+        }
+        return;
+      }
       state.updateProfile(
         Profile(
           name: state.profile.name,
@@ -81,6 +119,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
     }
 
+    if (!mounted) return;
     Navigator.of(context).pushReplacementNamed(AppRoutes.login);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Password updated — please log in.')),
@@ -141,7 +180,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           if (_codeSent)
             TextButton(
-              onPressed: _sendCode,
+              onPressed: _loading ? null : _sendCode,
               style: TextButton.styleFrom(padding: EdgeInsets.zero),
               child: const Text('Resend code',
                   style: TextStyle(
@@ -150,9 +189,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ],
       ),
       primary: PrimaryButton(
-        label: _codeSent ? 'Reset password' : 'Send reset code',
+        label: _codeSent
+            ? (_loading ? 'Resetting…' : 'Reset password')
+            : 'Send reset code',
         style: DpButtonStyle.yellow,
-        onPressed: _codeSent ? _reset : _sendCode,
+        onPressed: _loading ? null : (_codeSent ? _reset : _sendCode),
       ),
       footer: AuthFooterLink(
         text: 'Remembered it?',

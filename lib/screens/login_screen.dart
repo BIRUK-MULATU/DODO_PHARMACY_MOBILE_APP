@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/routes.dart';
+import '../data/api_client.dart';
 import '../data/app_state.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_text_field.dart';
@@ -16,8 +17,10 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _email = TextEditingController(text: 'Asterali@gmail.com');
+  final _email = TextEditingController(text: 'asterali@gmail.com');
   final _password = TextEditingController(text: '12345');
+
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -26,15 +29,41 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
-    // Any email starting with "admin" opens the admin panel.
-    final isAdmin =
-        _email.text.trim().toLowerCase().startsWith('admin');
-    AppStateScope.read(context).logIn(asAdmin: isAdmin);
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      isAdmin ? AppRoutes.admin : AppRoutes.track,
-      (route) => false,
-    );
+  Future<void> _login() async {
+    final email = _email.text.trim();
+    final password = _password.text;
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Enter your email and password.')));
+      return;
+    }
+
+    final state = AppStateScope.read(context);
+    setState(() => _loading = true);
+    try {
+      await state.authLogin(email: email, password: password);
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        state.isAdmin ? AppRoutes.admin : AppRoutes.track,
+        (route) => false,
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(
+              content: Text("Couldn't reach the server. Check your connection and try again.")));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -86,9 +115,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
       primary: PrimaryButton(
-        label: 'Log in',
+        label: _loading ? 'Logging in…' : 'Log in',
         style: DpButtonStyle.yellow,
-        onPressed: _login,
+        onPressed: _loading ? null : _login,
       ),
       footer: AuthFooterLink(
         text: 'Don’t have account?',

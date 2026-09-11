@@ -3,7 +3,40 @@ import 'package:flutter/material.dart';
 import '../../data/app_state.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_image.dart';
 import 'admin_scaffold.dart';
+
+void _viewReceipt(BuildContext context, String receiptImage) {
+  showDialog<void>(
+    context: context,
+    barrierColor: Colors.black87,
+    builder: (context) => GestureDetector(
+      onTap: () => Navigator.of(context).pop(),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  child: AppImage(receiptImage, fit: BoxFit.contain),
+                ),
+              ),
+              Positioned(
+                right: 12,
+                top: 12,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
 class AdminPaymentsScreen extends StatelessWidget {
   const AdminPaymentsScreen({super.key});
@@ -100,25 +133,40 @@ class _RequestCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          // Stand-in for the receipt image the user would have uploaded.
-          Container(
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.05),
+          // The receipt photo the user picked from their device.
+          if (request.receiptImage.isNotEmpty)
+            ClipRRect(
               borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.image_outlined, size: 18, color: Colors.black45),
-                  SizedBox(width: 6),
-                  Text('receipt_2027.jpg',
-                      style: TextStyle(color: Colors.black45)),
-                ],
+              child: GestureDetector(
+                onTap: () => _viewReceipt(context, request.receiptImage),
+                child: AppImage(
+                  request.receiptImage,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            )
+          else
+            Container(
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.image_not_supported_outlined,
+                        size: 18, color: Colors.black45),
+                    SizedBox(width: 6),
+                    Text('No receipt attached',
+                        style: TextStyle(color: Colors.black45)),
+                  ],
+                ),
               ),
             ),
-          ),
           if (pending) ...[
             const SizedBox(height: 12),
             Row(

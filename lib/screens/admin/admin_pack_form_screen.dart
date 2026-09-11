@@ -4,6 +4,7 @@ import '../../data/app_state.dart';
 import '../../data/mock_data.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_image.dart';
 import 'admin_scaffold.dart';
 
 /// Add (when [pack] is null) or edit an exam pack.
@@ -157,35 +158,11 @@ class _AdminPackFormScreenState extends State<AdminPackFormScreen> {
             _field(_price,
                 keyboardType: TextInputType.number, validator: _zeroOrMore),
             const SizedBox(height: 16),
-            _label('Cover image'),
-            SizedBox(
-              height: 84,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (final img in MockData.packImages)
-                    GestureDetector(
-                      onTap: () => setState(() => _image = img),
-                      child: Container(
-                        width: 84,
-                        margin: const EdgeInsets.only(right: 10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _image == img
-                                ? AppColors.ink
-                                : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(9),
-                          child: Image.asset(img, fit: BoxFit.cover),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            _label('Cover image — pick a preset or upload from your device'),
+            ImagePickerRow(
+              bundled: MockData.packImages,
+              selected: _image,
+              onSelected: (v) => setState(() => _image = v),
             ),
             const SizedBox(height: 24),
             FilledButton(

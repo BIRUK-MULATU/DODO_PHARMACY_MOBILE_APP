@@ -31,12 +31,28 @@ class _SplashScreenState extends State<SplashScreen>
   );
 
   Timer? _timer;
+  bool _minDelayDone = false;
+  bool _authChecked = false;
 
   @override
   void initState() {
     super.initState();
     _c.forward();
-    _timer = Timer(const Duration(milliseconds: 2400), _next);
+    // If a previous session's login token is still valid, this silently
+    // restores it (real profile, tracks/packs/questions from the backend,
+    // etc.) before the app decides where to land.
+    AppStateScope.read(context).tryAutoLogin().whenComplete(() {
+      _authChecked = true;
+      _maybeNext();
+    });
+    _timer = Timer(const Duration(milliseconds: 2400), () {
+      _minDelayDone = true;
+      _maybeNext();
+    });
+  }
+
+  void _maybeNext() {
+    if (_minDelayDone && _authChecked) _next();
   }
 
   void _next() {

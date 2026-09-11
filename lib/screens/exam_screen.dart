@@ -46,8 +46,10 @@ class _ExamScreenState extends State<ExamScreen> {
         .recordAnswer(packId: pack.id, wasCorrect: wasCorrect);
   }
 
+  int get _maxIndex => AppStateScope.read(context).maxReachableIndex(pack);
+
   void _go(int delta) {
-    final next = (_index + delta).clamp(0, pack.questionCount - 1);
+    final next = (_index + delta).clamp(0, _maxIndex);
     if (next == _index) return;
     setState(() {
       _forward = delta > 0;
@@ -64,9 +66,10 @@ class _ExamScreenState extends State<ExamScreen> {
   }
 
   void _jump(int target) {
+    final clamped = target.clamp(0, _maxIndex);
     setState(() {
-      _forward = target > _index;
-      _index = target;
+      _forward = clamped > _index;
+      _index = clamped;
     });
   }
 
@@ -91,8 +94,8 @@ class _ExamScreenState extends State<ExamScreen> {
     final counter =
         '${(_index + 1).toString().padLeft(4, '0')}/${pack.questionCount}';
 
-    // Free questions are used up and this one hasn't been answered yet.
-    final locked = state.needsPayment(pack) && !answered;
+    // Past the free window (or free answers used up) and not yet answered.
+    final locked = state.questionLocked(pack, _index) && !answered;
 
     return Scaffold(
       backgroundColor: AppColors.yellow,
@@ -174,7 +177,9 @@ class _ExamScreenState extends State<ExamScreen> {
                                   Border.all(color: AppColors.ink, width: 1.5),
                             ),
                             child: Text(
-                              'Question ${q.number} of ${q.total}',
+                              locked
+                                  ? 'Question ${_index + 1} of ${pack.questionCount}'
+                                  : 'Question ${q.number} of ${q.total}',
                               style: const TextStyle(
                                   fontWeight: FontWeight.w800, fontSize: 13),
                             ),
@@ -189,11 +194,17 @@ class _ExamScreenState extends State<ExamScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      q.prompt,
-                      style: const TextStyle(
+                      locked
+                          ? 'Question ${_index + 1} is part of the full set. '
+                              'Unlock it to see the question and its answer.'
+                          : q.prompt,
+                      style: TextStyle(
                         fontSize: 16,
                         height: 1.5,
                         fontWeight: FontWeight.w500,
+                        color: locked
+                            ? AppColors.ink.withValues(alpha: 0.6)
+                            : AppColors.ink,
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -245,14 +256,19 @@ class _ExamScreenState extends State<ExamScreen> {
                       alignment: Alignment.center,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.flag_rounded,
                               size: 20, color: AppColors.ink),
                           const SizedBox(width: 8),
-                          Text('Finish  •  $counter',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.ink)),
+                          Flexible(
+                            child: Text('Finish  •  $counter',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.ink)),
+                          ),
                         ],
                       ),
                     ),
@@ -275,10 +291,12 @@ class _ExamScreenState extends State<ExamScreen> {
   }
 
   Future<void> _openNavigator() async {
+    // Only expose the questions the learner can actually reach.
+    final reachable = _maxIndex + 1;
     final target = await showReviewNavigator(
       context,
-      total: pack.questionCount,
-      current: _index,
+      total: reachable,
+      current: _index.clamp(0, reachable - 1),
       answered: _answeredSet,
       correct: _correctSet,
     );
@@ -590,8 +608,8 @@ class _Paywall extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Unlock all ${pack.questionCount} questions with detailed '
-              'explanations to keep going.',
+              'Unlock all other questions with detailed explanations to keep '
+              'going.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.75),

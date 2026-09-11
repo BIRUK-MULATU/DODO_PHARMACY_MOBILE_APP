@@ -78,5 +78,19 @@ void main() {
     expect(nav.canPop(), isFalse);
     expect(find.textContaining('2027 Huge discount'), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    // "Home" goes to the first screen after login (the track picker) and
+    // resets the stack.
+    await tester.tap(find.byIcon(Icons.menu).first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.tap(inDrawer('Home'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    expect(find.textContaining('would you like to learn'), findsOneWidget);
+    expect(nav.canPop(), isFalse);
+    expect(tester.takeException(), isNull);
   });
 }

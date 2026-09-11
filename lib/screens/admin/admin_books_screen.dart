@@ -4,6 +4,7 @@ import '../../app/routes.dart';
 import '../../data/app_state.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_image.dart';
 import 'admin_scaffold.dart';
 
 /// Full CRUD over the premium book collection.
@@ -58,7 +59,7 @@ class AdminBooksScreen extends StatelessWidget {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.asset(b.cover,
+                            child: AppImage(b.cover,
                                 width: 52, height: 66, fit: BoxFit.cover),
                           ),
                           const SizedBox(width: 12),

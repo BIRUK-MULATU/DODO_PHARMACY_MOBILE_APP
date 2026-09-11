@@ -185,38 +185,49 @@ class WaveHeader extends StatelessWidget {
                           ),
                       ],
                     ),
-                    if (greeting != null || headline != null) const Spacer(),
-                    Padding(
-                      padding: EdgeInsets.only(right: trailingLogo ? 54 : 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (greeting != null)
-                            Text(
-                              greeting!,
-                              style: TextStyle(
-                                color:
-                                    AppColors.yellow.withValues(alpha: 0.65),
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
+                    if (greeting != null || headline != null)
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomLeft,
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                                right: trailingLogo ? 54 : 0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (greeting != null)
+                                  Text(
+                                    greeting!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: AppColors.yellow
+                                          .withValues(alpha: 0.65),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                if (headline != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      headline!,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: AppColors.yellow,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1.15,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                          if (headline != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                headline!,
-                                style: const TextStyle(
-                                  color: AppColors.yellow,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.15,
-                                ),
-                              ),
-                            ),
-                        ],
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],

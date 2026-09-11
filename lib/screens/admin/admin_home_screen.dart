@@ -85,6 +85,13 @@ class AdminHomeScreen extends StatelessWidget {
             badge: state.pendingPaymentCount,
             onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminPayments),
           ),
+          const SizedBox(height: 12),
+          AdminTile(
+            icon: Icons.article_rounded,
+            title: 'About page',
+            subtitle: 'Edit the app info shown in the side drawer',
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminAbout),
+          ),
           const SizedBox(height: 20),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(

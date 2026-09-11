@@ -8,6 +8,7 @@ import '../theme/app_colors.dart';
 import '../widgets/animated_bits.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/app_image.dart';
 import '../widgets/entrance.dart';
 import '../widgets/marquee_ticker.dart';
 import '../widgets/press_scale.dart';
@@ -38,7 +39,7 @@ class DashboardScreen extends StatelessWidget {
                 height: 180,
                 title: 'Dashboard',
                 onMenu: () => Scaffold.of(context).openDrawer(),
-                avatar: AssetImage(state.profile.avatar),
+                avatar: AppImage.provider(state.profile.avatar),
                 onAvatarTap: () =>
                     AppRoutes.goToSection(context, AppRoutes.profile),
               ),
@@ -47,7 +48,7 @@ class DashboardScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(top: 14),
                 child: SizedBox(
-                  height: 116,
+                  height: 132,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -136,18 +137,23 @@ class _StatCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: AppColors.yellow, size: 20),
-          CountUp(
-            value: value,
-            suffix: suffix,
-            style: const TextStyle(
-                color: AppColors.yellow,
-                fontSize: 22,
-                fontWeight: FontWeight.w900),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: CountUp(
+              value: value,
+              suffix: suffix,
+              style: const TextStyle(
+                  color: AppColors.yellow,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900),
+            ),
           ),
           Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                   color: AppColors.yellow.withValues(alpha: 0.7),
                   fontSize: 12,

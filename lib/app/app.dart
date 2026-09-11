@@ -36,20 +36,37 @@ class _DodoPharmacyAppState extends State<DodoPharmacyApp> {
           initialRoute: AppRoutes.splash,
           onGenerateRoute: AppRoutes.onGenerateRoute,
           builder: (context, child) {
-            // On very wide screens (web / tablet) frame the app in a
-            // phone-width column so the phone-first layouts stay legible.
             final mq = MediaQuery.of(context);
-            if (mq.size.width <= 520) return child!;
-            const w = 420.0;
+
+            // Keep the phone-first layouts intact whatever text-size the OS
+            // requests — clamp the scale to a sane band.
+            final scaled = mq.copyWith(
+              textScaler: mq.textScaler.clamp(
+                minScaleFactor: 0.9,
+                maxScaleFactor: 1.2,
+              ),
+            );
+
+            // On phones just apply the clamp.
+            if (mq.size.width <= 520) {
+              return MediaQuery(data: scaled, child: child!);
+            }
+
+            // On wide screens (web / tablet) frame the app in a phone-width
+            // card so the layouts stay legible.
+            const w = 430.0;
             return ColoredBox(
               color: const Color(0xFF111111),
               child: Center(
-                child: SizedBox(
-                  width: w,
-                  height: mq.size.height,
-                  child: MediaQuery(
-                    data: mq.copyWith(size: Size(w, mq.size.height)),
-                    child: child!,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: SizedBox(
+                    width: w,
+                    height: mq.size.height,
+                    child: MediaQuery(
+                      data: scaled.copyWith(size: Size(w, mq.size.height)),
+                      child: child!,
+                    ),
                   ),
                 ),
               ),

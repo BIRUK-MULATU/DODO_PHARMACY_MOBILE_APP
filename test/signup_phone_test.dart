@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dodo_pharmacy_mobile_app/data/app_state.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/signup_screen.dart';
 
+import 'support/fake_backend.dart';
+
 void main() {
   testWidgets('sign-up captures the phone number into the profile',
       (tester) async {
@@ -12,7 +14,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final state = AppState();
+    final state = AppState()..apiClientFactory = FakeBackend().client;
     await tester.pumpWidget(
       AppStateScope(
         state: state,
@@ -27,12 +29,20 @@ void main() {
 
     expect(find.text('Phone number'), findsOneWidget);
 
+    final passwordFields = find.widgetWithText(TextField, 'Password');
     await tester.enterText(
         find.widgetWithText(TextField, 'Email'), 'sam@example.com');
     await tester.enterText(
         find.widgetWithText(TextField, 'Phone number'), '+251900112233');
+    await tester.enterText(passwordFields.at(0), 'secret123');
+    await tester.enterText(passwordFields.at(1), 'secret123');
     await tester.tap(find.text('Sign Up'));
-    await tester.pump();
+    // The sign-up call and the catalog fetch it triggers both go through a
+    // fake in-memory backend (no real network/timers), but still need a few
+    // pumps to drain their Future chains.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     expect(state.profile.phone, '+251900112233');
     expect(state.profile.email, 'sam@example.com');

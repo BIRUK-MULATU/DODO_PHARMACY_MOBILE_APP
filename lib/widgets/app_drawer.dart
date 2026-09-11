@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/routes.dart';
 import '../data/app_state.dart';
 import '../theme/app_colors.dart';
+import 'app_image.dart';
 import 'assets.dart';
 import 'entrance.dart';
 import 'press_scale.dart';
@@ -17,6 +18,14 @@ class AppDrawer extends StatelessWidget {
 
   void _navigate(BuildContext context, String route) {
     Navigator.of(context).pop(); // close the drawer
+    if (route == AppRoutes.track) {
+      // "Home" goes back to the first screen after login (the track picker),
+      // resetting the stack just like signing in does.
+      if (ModalRoute.of(context)?.settings.name != route) {
+        Navigator.of(context).pushNamedAndRemoveUntil(route, (_) => false);
+      }
+      return;
+    }
     AppRoutes.goToSection(context, route);
   }
 
@@ -26,7 +35,7 @@ class AppDrawer extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final items = <_DrawerItem>[
       _DrawerItem(Icons.person, 'Profile', AppRoutes.profile),
-      _DrawerItem(Icons.home_rounded, 'Home', AppRoutes.home),
+      _DrawerItem(Icons.home_rounded, 'Home', AppRoutes.track),
       _DrawerItem(Icons.dashboard_rounded, 'Dashboard', AppRoutes.dashboard),
       _DrawerItem(Icons.menu_book_rounded, 'E-Book', AppRoutes.ebook),
       if (state.isAdmin)
@@ -93,7 +102,7 @@ class AppDrawer extends StatelessWidget {
                             color: AppColors.ink.withValues(alpha: 0.7),
                             width: 2),
                         image: DecorationImage(
-                          image: AssetImage(state.profile.avatar),
+                          image: AppImage.provider(state.profile.avatar),
                           fit: BoxFit.cover,
                         ),
                       ),

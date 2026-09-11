@@ -5,6 +5,32 @@ import 'package:dodo_pharmacy_mobile_app/data/app_state.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/profile_screen.dart';
 
 void main() {
+  testWidgets('profile edit header fits a narrow phone without overflow',
+      (tester) async {
+    // A small phone in logical pixels.
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final state = AppState();
+    state.profile.name = 'Aster Wondimagegnehu Ali'; // a long name
+    await tester.pumpWidget(
+      AppStateScope(
+        state: state,
+        child: const MaterialApp(home: ProfileScreen()),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 800));
+
+    await tester.tap(find.text('Edit Profile'));
+    await tester.pump();
+
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(tester.takeException(), isNull); // no RenderFlex overflow
+  });
+
   testWidgets('user edits their profile on-device and it saves', (tester) async {
     tester.view.physicalSize = const Size(600, 1600);
     tester.view.devicePixelRatio = 1.0;
@@ -32,7 +58,7 @@ void main() {
     await tester.enterText(
         find.widgetWithText(TextField, 'Phone number'), '+251911000000');
 
-    await tester.tap(find.text('Save Profile'));
+    await tester.tap(find.text('Save'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -63,17 +89,44 @@ void main() {
     await tester.pump();
     await tester.enterText(
         find.widgetWithText(TextField, 'Email'), 'not-an-email');
-    await tester.tap(find.text('Save Profile'));
+    await tester.tap(find.text('Save'));
     await tester.pump();
 
     expect(find.textContaining('valid email'), findsOneWidget);
     expect(state.profile.email, original);
   });
 
-  test('AppState.setAvatar updates the profile picture', () {
+  test('AppState.setAvatar accepts a bundled asset or an uploaded data URI', () {
     final state = AppState();
     expect(state.profile.avatar, 'assets/images/avatar.png');
+
     state.setAvatar('assets/images/pharmacist.png');
     expect(state.profile.avatar, 'assets/images/pharmacist.png');
+
+    const uploaded = 'data:image/png;base64,iVBORw0KGgo=';
+    state.setAvatar(uploaded);
+    expect(state.profile.avatar, uploaded);
+  });
+
+  testWidgets('the avatar picker offers "Choose from device"', (tester) async {
+    tester.view.physicalSize = const Size(600, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      AppStateScope(
+        state: AppState(),
+        child: const MaterialApp(home: ProfileScreen()),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 800));
+
+    // Tap the camera badge on the avatar.
+    await tester.tap(find.byIcon(Icons.camera_alt));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose from device'), findsOneWidget);
+    expect(find.text('Profile picture'), findsOneWidget);
   });
 }
