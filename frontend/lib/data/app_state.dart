@@ -822,6 +822,21 @@ class AppState extends ChangeNotifier {
     return (user['unlockedPacks'] as List).cast<String>();
   }
 
+  /// Promotes a user to admin, or demotes an admin back to a regular user.
+  /// Online-only (there's only ever one local/demo user offline, so there's
+  /// no one else to promote). The server refuses to let an admin remove
+  /// their own access, or demote the last remaining admin — either throws
+  /// an [ApiException] with a message safe to show directly.
+  Future<AdminUserSummary> setUserRole({
+    required String userId,
+    required bool makeAdmin,
+  }) async {
+    final res = await api!.put('/users/$userId/role', {
+      'role': makeAdmin ? 'admin' : 'user',
+    }) as Map<String, dynamic>;
+    return AdminUserSummary.fromJson(res['user'] as Map<String, dynamic>);
+  }
+
   void unlock(String packId) {
     _unlocked.add(packId);
     notifyListeners();

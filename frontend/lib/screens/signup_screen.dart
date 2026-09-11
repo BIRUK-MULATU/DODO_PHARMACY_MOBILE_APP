@@ -17,6 +17,7 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+  final _name = TextEditingController();
   final _email = TextEditingController();
   final _phone = TextEditingController();
   final _password = TextEditingController();
@@ -26,11 +27,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   void dispose() {
+    _name.dispose();
     _email.dispose();
     _phone.dispose();
     _password.dispose();
     _confirm.dispose();
     super.dispose();
+  }
+
+  /// A starter username from the email's local part (e.g. "sara.k+2@x.com"
+  /// → "sarak2") — not shown to the user at signup (keeps the form short);
+  /// they can change it any time from Profile. Usernames aren't required to
+  /// be unique server-side, so no collision handling is needed here.
+  String _usernameFromEmail(String email) {
+    final local = email.split('@').first;
+    final cleaned = local.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    return cleaned.isEmpty ? 'user' : cleaned;
   }
 
   void _showError(String message) {
@@ -40,10 +52,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _signup() async {
+    final name = _name.text.trim();
     final email = _email.text.trim();
     final password = _password.text;
-    if (email.isEmpty || password.isEmpty) {
-      _showError('Enter an email and a password to sign up.');
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      _showError('Enter your name, email and a password to sign up.');
       return;
     }
     if (password != _confirm.text) {
@@ -54,12 +67,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final state = AppStateScope.read(context);
     setState(() => _loading = true);
     try {
-      // The form only collects email/phone/password — name and username
-      // keep the app's default profile identity, same as before there was a
-      // real backend to register them against.
       await state.authSignUp(
-        name: state.profile.name,
-        username: state.profile.username,
+        name: name,
+        username: _usernameFromEmail(email),
         email: email,
         password: password,
         phone: _phone.text.trim(),
@@ -86,6 +96,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       hero: Img.signupHero,
       title: 'Sign up',
       fields: [
+        AppTextField(
+          hint: 'Full name',
+          icon: Icons.person_outline,
+          controller: _name,
+        ),
         AppTextField(
           hint: 'Email',
           icon: Icons.mail_outline,

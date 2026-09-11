@@ -530,6 +530,36 @@ class FakeBackend {
       return _ok({'user': _adminUserJson(target)});
     }
 
+    // Promote/demote — mirrors backend/src/routes/users.js's `/:id/role`,
+    // including its two safety rails (no self-demotion, never demote the
+    // last admin).
+    final userRoleMatch = RegExp(r'^/users/([^/]+)/role$').firstMatch(path);
+    if (req.method == 'PUT' && userRoleMatch != null) {
+      if (caller == null) return _ok({'error': 'Missing bearer token.'}, 401);
+      if (caller['role'] != 'admin') return _ok({'error': 'Admin access required.'}, 403);
+      final role = body['role'] as String?;
+      if (role != 'admin' && role != 'user') {
+        return _ok({'error': "role must be 'admin' or 'user'."}, 400);
+      }
+      final target = users.values.firstWhere(
+        (u) => u['id'] == userRoleMatch.group(1),
+        orElse: () => <String, dynamic>{},
+      );
+      if (target.isEmpty) return _ok({'error': 'User not found.'}, 404);
+
+      if (role == 'user' && target['id'] == caller['id']) {
+        return _ok({'error': "You can't remove your own admin access."}, 400);
+      }
+      if (role == 'user' && target['role'] == 'admin') {
+        final adminCount = users.values.where((u) => u['role'] == 'admin').length;
+        if (adminCount <= 1) {
+          return _ok({'error': 'At least one admin must remain.'}, 400);
+        }
+      }
+      target['role'] = role;
+      return _ok({'user': _adminUserJson(target)});
+    }
+
     // Gated single-question fetch — mirrors backend/src/routes/exam.js.
     final examQuestionMatch = RegExp(r'^/exam/packs/([^/]+)/questions/(\d+)$').firstMatch(path);
     if (req.method == 'GET' && examQuestionMatch != null) {

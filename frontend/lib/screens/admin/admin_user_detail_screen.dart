@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/api_client.dart';
 import '../../data/app_state.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_image.dart';
@@ -23,6 +24,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
   bool _loading = true;
   Set<String> _unlocked = {};
   final Set<String> _pending = {};
+  late bool _isAdmin = widget.user.isAdmin;
+  bool _roleBusy = false;
 
   @override
   void initState() {
@@ -40,10 +43,56 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
       setState(() {
         _activity = activity;
         _unlocked = activity.user.unlockedPacks.toSet();
+        _isAdmin = activity.user.isAdmin;
         _loading = false;
       });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  bool get _isSelf =>
+      widget.user.email.toLowerCase() ==
+      AppStateScope.read(context).profile.email.toLowerCase();
+
+  Future<void> _setRole(bool makeAdmin) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(makeAdmin ? 'Make this user an admin?' : 'Remove admin access?'),
+        content: Text(makeAdmin
+            ? '${widget.user.name} will be able to manage tracks, packs, '
+                'questions, payments, users, and Q&A — everything an admin can do.'
+            : '${widget.user.name} will lose access to the admin panel and '
+                'go back to being a regular learner.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(makeAdmin ? 'Make admin' : 'Remove')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    setState(() => _roleBusy = true);
+    try {
+      final updated = await AppStateScope.read(context)
+          .setUserRole(userId: widget.user.id, makeAdmin: makeAdmin);
+      if (!mounted) return;
+      setState(() {
+        _isAdmin = updated.isAdmin;
+        _roleBusy = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _roleBusy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is ApiException ? e.message : "Couldn't update admin access.")),
+      );
     }
   }
 
@@ -98,6 +147,13 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
           _ProfileCard(user: u),
           const SizedBox(height: 16),
           _StatsRow(user: u),
+          const SizedBox(height: 16),
+          _RoleCard(
+            isAdmin: _isAdmin,
+            busy: _roleBusy,
+            isSelf: _isSelf,
+            onChanged: _setRole,
+          ),
           const SizedBox(height: 20),
           const Text('Access — open or close any pack or book',
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
@@ -111,6 +167,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
           const SizedBox(height: 12),
           for (final pack in state.examPacks)
             _AccessRow(
+              key: ValueKey('access-${pack.id}'),
               icon: Icons.quiz_rounded,
               title: pack.title,
               subtitle: '${pack.priceBirr} Birr',
@@ -120,6 +177,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
             ),
           for (final book in state.books)
             _AccessRow(
+              key: ValueKey('access-${book.id}'),
               icon: Icons.menu_book_rounded,
               title: book.title,
               subtitle: '${book.priceBirr} Birr',
@@ -261,8 +319,85 @@ class _Stat extends StatelessWidget {
   }
 }
 
+/// Lets one admin promote another user to admin, or demote an admin back
+/// to a regular learner — separate from a user's *content* access above.
+/// Disabled when viewing your own account (an admin can't remove their own
+/// access here — the server refuses it too, this just avoids a round trip
+/// to find that out).
+class _RoleCard extends StatelessWidget {
+  const _RoleCard({
+    required this.isAdmin,
+    required this.busy,
+    required this.isSelf,
+    required this.onChanged,
+  });
+
+  final bool isAdmin;
+  final bool busy;
+  final bool isSelf;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.admin_panel_settings_rounded,
+              size: 20, color: AppColors.ink.withValues(alpha: 0.6)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Admin access',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  isSelf
+                      ? "You can't change your own admin access here."
+                      : 'Manages tracks, packs, questions, payments, users and Q&A.',
+                  style: TextStyle(
+                      fontSize: 11.5,
+                      color: Colors.black.withValues(alpha: 0.45)),
+                ),
+              ],
+            ),
+          ),
+          Text(isAdmin ? 'Admin' : 'Learner',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: isAdmin ? AppColors.correct : Colors.black45)),
+          const SizedBox(width: 6),
+          if (busy)
+            const SizedBox(
+                width: 32,
+                height: 20,
+                child: Center(
+                    child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))))
+          else
+            Switch(
+              key: const Key('admin-role-switch'),
+              value: isAdmin,
+              activeTrackColor: AppColors.correct,
+              onChanged: isSelf ? null : onChanged,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AccessRow extends StatelessWidget {
   const _AccessRow({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,

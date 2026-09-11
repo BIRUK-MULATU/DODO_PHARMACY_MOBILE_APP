@@ -28,7 +28,7 @@ returns `{"ok":true}` once it's up.
 
 ## Shape
 
-- `src/models/` — Mongoose schemas mirroring `lib/data/models.dart`
+- `src/models/` — Mongoose schemas mirroring `../frontend/lib/data/models.dart`
   (`Track`, `ExamPack`, `Question`, `EBook`, `PaymentRequest`, `AboutInfo`,
   `Bank`, `User` — the real, persisted stand-in for `Profile`, which also
   carries `currentStreak`/`bestStreak`, `dailyActivity` (a date → count map,
@@ -90,12 +90,12 @@ it already has:
   everyone except an admin, who needs the full content to prefill the edit
   form.
 
-`lib/data/app_state.dart` mirrors this split: `AppState.questions` only ever
+`../frontend/lib/data/app_state.dart` mirrors this split: `AppState.questions` only ever
 bulk-populates for an admin session (`_loadCatalog`); a learner's exam
 screen fetches one question at a time through `fetchExamQuestion`
-(`lib/screens/exam_screen.dart`'s `_slotFor`/`_ensureLoaded`), and the e-book
+(`../frontend/lib/screens/exam_screen.dart`'s `_slotFor`/`_ensureLoaded`), and the e-book
 reader fetches a book's real content through `fetchBookDetail`
-(`lib/screens/ebook_reader_screen.dart`) instead of trusting the bulk list.
+(`../frontend/lib/screens/ebook_reader_screen.dart`) instead of trusting the bulk list.
 
 ## Dashboard data
 
@@ -167,12 +167,24 @@ write date... make opened and closed [access] for user page")
   admin can now also grant access outright with no receipt on file, revoke
   it, or correct a mistake, for any pack or e-book (both are looked up by
   id — `ExamPack` or `EBook` — before the toggle is allowed).
+- `PUT /api/users/:id/role` (`{ role: 'admin' | 'user' }`) — promotes a user
+  to admin, or demotes an admin back to a regular user. Two safety rails:
+  an admin can never remove their **own** admin access this way (avoids a
+  mid-session self-lockout even if other admins exist), and the **last**
+  remaining admin account can't be demoted (avoids locking everyone out —
+  in practice this second check can only ever be reached by trying to
+  demote yourself when you're the sole admin, since a *different* caller
+  demoting another admin necessarily means at least 2 admins existed going
+  in; both checks are kept for defense in depth).
 
 `AdminUsersScreen`/`AdminUserDetailScreen` in the Flutter app call these
-through `AppState.fetchAllUsers`/`fetchUserActivity`/`setUserAccess`. The
-detail screen's per-book row also has a preview button that opens
-`EBookReaderScreen` with that book, so admin can read the actual content a
-user purchased — the same reader the user gets, not a separate view.
+through `AppState.fetchAllUsers`/`fetchUserActivity`/`setUserAccess`/
+`setUserRole`. The detail screen's per-book row also has a preview button
+that opens `EBookReaderScreen` with that book, so admin can read the actual
+content a user purchased — the same reader the user gets, not a separate
+view. The role toggle sits above the per-pack/book access rows as a
+distinct "Admin access" switch, disabled entirely when viewing your own
+account.
 
 ## Q&A — a side-drawer "ask a question" flow, answered by admin
 
@@ -242,7 +254,7 @@ deploying it for real users still needs, at minimum:
 - **Real hosting.** Right now it's `localhost` against a local `mongod`.
   Needs a real MongoDB (Atlas, or a self-hosted instance with auth enabled —
   this one has none) and a real server (with `--dart-define=API_BASE_URL=...`
-  pointed at it when building the app — see `lib/data/api_client.dart`).
+  pointed at it when building the app — see `../frontend/lib/data/api_client.dart`).
 - **HTTPS.** Terminate TLS at the hosting layer (a platform's built-in
   HTTPS, or nginx + certbot on a VPS) — a real domain is a prerequisite.
 - **Real email for password reset** — see "Auth" above.
@@ -253,9 +265,9 @@ deploying it for real users still needs, at minimum:
 
 ## Wired into the app
 
-`lib/data/app_state.dart` talks to this backend through
-`lib/data/api_client.dart`. By default (`AppState.api == null`) it doesn't —
-the app runs fully offline against `lib/data/mock_data.dart`, which is what
+`../frontend/lib/data/app_state.dart` talks to this backend through
+`../frontend/lib/data/api_client.dart`. By default (`AppState.api == null`) it doesn't —
+the app runs fully offline against `../frontend/lib/data/mock_data.dart`, which is what
 every pre-existing test exercises. `authSignUp`/`authLogin` (called from
 `login_screen.dart`/`signup_screen.dart`) and `tryAutoLogin` (called from
 `splash_screen.dart`) switch that same `AppState` into an online session:

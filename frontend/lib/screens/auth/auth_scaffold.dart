@@ -147,9 +147,17 @@ class _OrDivider extends StatelessWidget {
 class GoogleButton extends StatelessWidget {
   const GoogleButton({super.key});
 
+  void _showComingSoon(BuildContext context) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+          content: Text('Google sign-in is coming soon — use email for now.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     return PressScale(
+      onTap: () => _showComingSoon(context),
       child: Container(
         height: 58,
         decoration: BoxDecoration(

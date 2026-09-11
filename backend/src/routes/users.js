@@ -91,4 +91,33 @@ router.put('/:id/access', requireAuth, requireAdmin, async (req, res) => {
   res.json({ user: summarize(user) });
 });
 
+// Promote a user to admin, or demote an admin back to a regular user. Two
+// safety rails: an admin can't remove their own access (avoids accidentally
+// locking themselves out), and the very last admin account can't be
+// demoted (avoids locking everyone out).
+router.put('/:id/role', requireAuth, requireAdmin, async (req, res) => {
+  const { role } = req.body ?? {};
+  if (!['admin', 'user'].includes(role)) {
+    return res.status(400).json({ error: "role must be 'admin' or 'user'." });
+  }
+
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found.' });
+
+  if (role === 'user' && String(user._id) === String(req.user._id)) {
+    return res.status(400).json({ error: "You can't remove your own admin access." });
+  }
+  if (role === 'user' && user.role === 'admin') {
+    const adminCount = await User.countDocuments({ role: 'admin' });
+    if (adminCount <= 1) {
+      return res.status(400).json({ error: 'At least one admin must remain.' });
+    }
+  }
+
+  user.role = role;
+  await user.save();
+
+  res.json({ user: summarize(user) });
+});
+
 module.exports = router;
