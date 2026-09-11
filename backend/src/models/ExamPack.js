@@ -10,6 +10,12 @@ const examPackSchema = new mongoose.Schema(
     questionCount: { type: Number, required: true },
     priceBirr: { type: Number, required: true },
     freeLimit: { type: Number, required: true },
+
+    // This pack's own "About Questions" screen content — each pack has its
+    // own, not shared across every pack.
+    aboutSummary: { type: String, default: '' },
+    aboutBullets: { type: [String], default: [] },
+    coreCourses: { type: [String], default: [] },
   },
   { _id: false, timestamps: true },
 );

@@ -143,8 +143,47 @@ class PaymentRequest {
       );
 }
 
+enum QaStatus { pending, answered }
+
+/// A question a learner asked from the "Q&A" screen, and — once an admin
+/// has gotten to it — the official answer.
+class QaItem {
+  QaItem({
+    required this.id,
+    required this.askedByName,
+    required this.question,
+    required this.createdAt,
+    this.answer = '',
+    this.status = QaStatus.pending,
+    this.answeredAt,
+  });
+
+  final String id;
+  final String askedByName;
+  final String question;
+  final DateTime createdAt;
+  String answer;
+  QaStatus status;
+  DateTime? answeredAt;
+
+  factory QaItem.fromJson(Map<String, dynamic> json) => QaItem(
+        id: json['id'] as String,
+        askedByName: json['userName'] as String,
+        question: json['question'] as String,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        answer: json['answer'] as String? ?? '',
+        status: QaStatus.values.byName(json['status'] as String),
+        answeredAt: json['answeredAt'] != null
+            ? DateTime.parse(json['answeredAt'] as String)
+            : null,
+      );
+}
+
+/// A bank account users transfer payment to. Admin-editable (see
+/// `admin_bank_form_screen.dart`) — [code] is the id, a short label the
+/// admin picks (e.g. "CBE"), not auto-generated like a track/pack id.
 class BankAccount {
-  const BankAccount({
+  BankAccount({
     required this.code,
     required this.name,
     required this.owner,
@@ -152,9 +191,24 @@ class BankAccount {
   });
 
   final String code;
-  final String name;
-  final String owner;
-  final String number;
+  String name;
+  String owner;
+  String number;
+
+  BankAccount copyWith({String? name, String? owner, String? number}) =>
+      BankAccount(
+        code: code,
+        name: name ?? this.name,
+        owner: owner ?? this.owner,
+        number: number ?? this.number,
+      );
+
+  factory BankAccount.fromJson(Map<String, dynamic> json) => BankAccount(
+        code: json['id'] as String,
+        name: json['name'] as String,
+        owner: json['owner'] as String,
+        number: json['number'] as String,
+      );
 }
 
 class EBook {
@@ -169,6 +223,7 @@ class EBook {
     this.pdfPath,
     this.pdfBytes,
     this.pdfName,
+    this.totalPageCountOverride,
   });
 
   final String id;
@@ -178,7 +233,8 @@ class EBook {
   List<String> subjects;
 
   /// The book body as typed pages, one entry per page. Used when there is no
-  /// [pdfPath] / [pdfBytes].
+  /// [pdfPath] / [pdfBytes]. May hold fewer than the book's true page count —
+  /// see [totalPageCountOverride].
   List<String> pages;
 
   /// How many pages can be read before payment is required.
@@ -190,11 +246,18 @@ class EBook {
   Uint8List? pdfBytes;
   String? pdfName;
 
+  /// The book's real total page count, from the backend. Only set on an
+  /// object built from a gated fetch (the catalog's metadata-only listing,
+  /// or a locked book's preview) where [pages] was truncated to less than
+  /// the true total — [pageCount] reports this instead of `pages.length`
+  /// when present, so "X of TOTAL pages" copy stays correct either way.
+  int? totalPageCountOverride;
+
   bool get hasPdf =>
       (pdfPath != null && pdfPath!.isNotEmpty) ||
       (pdfBytes != null && pdfBytes!.isNotEmpty);
 
-  int get pageCount => pages.length;
+  int get pageCount => totalPageCountOverride ?? pages.length;
 
   EBook copyWith({
     String? title,
@@ -218,13 +281,18 @@ class EBook {
       pdfPath: pdfPath ?? this.pdfPath,
       pdfBytes: pdfBytes ?? this.pdfBytes,
       pdfName: pdfName ?? this.pdfName,
+      // Deliberately not carried over: copyWith is only ever used with a
+      // full local edit (admin forms), where `pages` is always the whole
+      // book, so `pageCount` should go back to being computed from it.
     );
   }
 
   /// From the backend's book JSON. PDFs travel as base64 (`pdfData`) rather
   /// than a device-local path, so they decode straight into [pdfBytes] —
   /// `PdfDocument.openData` works the same on every platform, no per-device
-  /// file to save.
+  /// file to save. `pageCount` is sent separately from `pages` because a
+  /// gated fetch may hand back fewer pages than the book truly has — see
+  /// [totalPageCountOverride].
   factory EBook.fromJson(Map<String, dynamic> json) => EBook(
         id: json['id'] as String,
         title: json['title'] as String,
@@ -237,6 +305,7 @@ class EBook {
             ? base64Decode(json['pdfData'] as String)
             : null,
         pdfName: json['pdfName'] as String?,
+        totalPageCountOverride: json['pageCount'] as int?,
       );
 }
 
@@ -249,6 +318,9 @@ class ExamPack {
     required this.priceBirr,
     required this.freeLimit,
     this.trackId = '',
+    this.aboutSummary = '',
+    this.aboutBullets = const [],
+    this.coreCourses = const [],
   });
 
   final String id;
@@ -263,6 +335,13 @@ class ExamPack {
   /// How many questions can be answered before payment is required.
   final int freeLimit;
 
+  /// This pack's own "About Questions" screen content — the subtitle line,
+  /// the bullet list, and "Core Courses Covered". Each pack has its own
+  /// (not shared across every pack).
+  final String aboutSummary;
+  final List<String> aboutBullets;
+  final List<String> coreCourses;
+
   ExamPack copyWith({
     String? trackId,
     String? title,
@@ -270,6 +349,9 @@ class ExamPack {
     int? questionCount,
     int? priceBirr,
     int? freeLimit,
+    String? aboutSummary,
+    List<String>? aboutBullets,
+    List<String>? coreCourses,
   }) {
     return ExamPack(
       id: id,
@@ -279,6 +361,9 @@ class ExamPack {
       questionCount: questionCount ?? this.questionCount,
       priceBirr: priceBirr ?? this.priceBirr,
       freeLimit: freeLimit ?? this.freeLimit,
+      aboutSummary: aboutSummary ?? this.aboutSummary,
+      aboutBullets: aboutBullets ?? this.aboutBullets,
+      coreCourses: coreCourses ?? this.coreCourses,
     );
   }
 
@@ -290,6 +375,9 @@ class ExamPack {
         questionCount: json['questionCount'] as int,
         priceBirr: json['priceBirr'] as int,
         freeLimit: json['freeLimit'] as int,
+        aboutSummary: json['aboutSummary'] as String? ?? '',
+        aboutBullets: (json['aboutBullets'] as List? ?? const []).cast<String>(),
+        coreCourses: (json['coreCourses'] as List? ?? const []).cast<String>(),
       );
 }
 
@@ -304,6 +392,8 @@ class AboutInfo {
     required this.supportTelegram,
     required this.supportPhone,
     required this.footer,
+    this.marqueeText = '',
+    this.onboardingSubtitle = '',
   });
 
   String version;
@@ -324,6 +414,13 @@ class AboutInfo {
   /// The small line at the very bottom.
   String footer;
 
+  /// The promo strip looping under the header on Home/Dashboard/Track
+  /// select/E-book (`MarqueeTicker`).
+  String marqueeText;
+
+  /// The subtitle under "WELCOME TO" on the onboarding screen.
+  String onboardingSubtitle;
+
   AboutInfo copyWith({
     String? version,
     String? intro,
@@ -333,6 +430,8 @@ class AboutInfo {
     String? supportTelegram,
     String? supportPhone,
     String? footer,
+    String? marqueeText,
+    String? onboardingSubtitle,
   }) {
     return AboutInfo(
       version: version ?? this.version,
@@ -343,6 +442,8 @@ class AboutInfo {
       supportTelegram: supportTelegram ?? this.supportTelegram,
       supportPhone: supportPhone ?? this.supportPhone,
       footer: footer ?? this.footer,
+      marqueeText: marqueeText ?? this.marqueeText,
+      onboardingSubtitle: onboardingSubtitle ?? this.onboardingSubtitle,
     );
   }
 
@@ -355,6 +456,8 @@ class AboutInfo {
         supportTelegram: json['supportTelegram'] as String? ?? '',
         supportPhone: json['supportPhone'] as String? ?? '',
         footer: json['footer'] as String? ?? '',
+        marqueeText: json['marqueeText'] as String? ?? '',
+        onboardingSubtitle: json['onboardingSubtitle'] as String? ?? '',
       );
 }
 

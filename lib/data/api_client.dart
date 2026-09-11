@@ -17,10 +17,19 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// Compile-time override for where the API lives, e.g.
+/// `flutter build web --dart-define=API_BASE_URL=https://api.dodomed.et/api`.
+/// Empty (the default) means "figure it out for local development" — see
+/// [_defaultBaseUrl]. Set this for any real build; the local-dev guesses
+/// below only ever resolve to `localhost`/`10.0.2.2`, which nothing outside
+/// this machine can reach.
+const _baseUrlOverride = String.fromEnvironment('API_BASE_URL');
+
 /// Where the API lives. Android emulators can't reach the host machine via
 /// `localhost` (it means the emulator itself), so it gets `10.0.2.2`
 /// instead — everything else (web, iOS simulator, desktop) uses `localhost`.
 String _defaultBaseUrl() {
+  if (_baseUrlOverride.isNotEmpty) return _baseUrlOverride;
   if (kIsWeb) return 'http://localhost:4000/api';
   if (defaultTargetPlatform == TargetPlatform.android) {
     return 'http://10.0.2.2:4000/api';

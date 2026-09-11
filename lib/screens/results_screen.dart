@@ -21,15 +21,43 @@ class ResultsArgs {
   final int answered;
 }
 
+/// A performance tier for the results screen — graded on accuracy, with an
+/// honest label and message instead of one generic "Well done!" no matter
+/// how the learner actually did.
+class _Grade {
+  const _Grade(this.label, this.message, this.color);
+  final String label;
+  final String message;
+  final Color color;
+
+  static _Grade forAccuracy(int accuracy) {
+    if (accuracy >= 90) {
+      return const _Grade(
+          'Excellent!', 'You deserve it! 🏆', AppColors.correct);
+    }
+    if (accuracy >= 75) {
+      return const _Grade(
+          'Very Good!', 'Great performance — keep it up!', AppColors.correct);
+    }
+    if (accuracy >= 50) {
+      return const _Grade('Good', 'Solid effort — keep practising to get '
+          'even better.', AppColors.yellowOlive);
+    }
+    return const _Grade('Needs Improvement',
+        "Don't worry — improve it! Review the explanations and try again.",
+        AppColors.wrong);
+  }
+}
+
 class ResultsScreen extends StatelessWidget {
   const ResultsScreen({super.key, required this.args});
   final ResultsArgs args;
 
   @override
   Widget build(BuildContext context) {
-    // Scale the sample score up to the full bank for a satisfying headline.
-    final scaled =
-        ((args.correct / args.answered) * args.pack.questionCount).round();
+    final accuracy =
+        args.answered == 0 ? 0 : ((args.correct / args.answered) * 100).round();
+    final grade = _Grade.forAccuracy(accuracy);
 
     return Scaffold(
       backgroundColor: AppColors.yellow,
@@ -67,19 +95,54 @@ class ResultsScreen extends StatelessWidget {
                 Entrance(
                   delay: const Duration(milliseconds: 200),
                   child: CountUp(
-                    value: scaled,
-                    suffix: ' / ${args.pack.questionCount}',
+                    value: args.correct,
+                    suffix: ' / ${args.answered} correct',
                     duration: const Duration(milliseconds: 1500),
                     style: const TextStyle(
                         fontSize: 40, fontWeight: FontWeight.w900),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
+                Entrance(
+                  delay: const Duration(milliseconds: 350),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.ink,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text('$accuracy% accuracy',
+                        style: const TextStyle(
+                            color: AppColors.yellow,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14)),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Entrance(
                   delay: const Duration(milliseconds: 500),
-                  child: const Text('Well done!',
+                  child: Text(grade.label,
+                      textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 26, fontWeight: FontWeight.w800)),
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: grade.color)),
+                ),
+                const SizedBox(height: 4),
+                Entrance(
+                  delay: const Duration(milliseconds: 600),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(grade.message,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3)),
+                  ),
                 ),
                 Expanded(
                   child: Entrance(
@@ -105,7 +168,9 @@ class ResultsScreen extends StatelessWidget {
               ],
             ),
           ),
-          const Positioned.fill(child: ConfettiBurst()),
+          // Only celebrate a decent result — confetti over a score that
+          // needs improvement would feel dishonest.
+          if (accuracy >= 50) const Positioned.fill(child: ConfettiBurst()),
         ],
       ),
     );

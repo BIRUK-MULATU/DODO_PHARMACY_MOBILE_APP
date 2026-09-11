@@ -31,14 +31,6 @@ class MockData {
     'assets/images/pay_hero.png',
   ];
 
-  /// Avatars the user can pick for their profile from their device.
-  static const List<String> avatarChoices = [
-    'assets/images/avatar.png',
-    'assets/images/pharmacist.png',
-    'assets/images/nurse.png',
-    'assets/images/kid.png',
-  ];
-
   /// Seed tracks. The admin panel adds to / edits this list (in memory).
   static List<Track> seedTracks() => [
         Track(id: 'pharmacy', name: 'Pharmacy', figure: trackFigures[0]),
@@ -55,6 +47,21 @@ class MockData {
           questionCount: 3000,
           priceBirr: 550,
           freeLimit: 5,
+          aboutSummary: 'Ultimate Pharmacy Exit Exam Master Question Bank '
+              '(3000+ MCQs & Detailed Explanations)',
+          aboutBullets: const [
+            '3,000 Total MCQs: Comprehensive question bank organized by subject, difficulty, and year-by-year past exam trends.',
+            'Multi-Year Questions: Incorporates previous national exit exam and licensure questions alongside model questions tailored to current curriculum blueprints.',
+            'Detailed Explanations: Every question includes a thorough step-by-step breakdown explaining why the correct choice is right and why distractors are incorrect.',
+            'Mock Practice Tests: Multi-year exam simulations to help build stamina, speed, and exam confidence.',
+          ],
+          coreCourses: const [
+            'Pharmacology & Therapeutics',
+            'Pharmaceutics & Industrial Pharmacy',
+            'Pharmaceutical Chemistry',
+            'Clinical Pharmacy & Pharmacy Practice',
+            'Public Health & Pharmacoepidemiology',
+          ],
         ),
         ExamPack(
           id: 'coc-2800',
@@ -64,6 +71,21 @@ class MockData {
           questionCount: 2800,
           priceBirr: 450,
           freeLimit: 5,
+          aboutSummary: 'Ultimate Pharmacy COC Licensure Exam Master '
+              'Question Bank (2800+ MCQs & Detailed Explanations)',
+          aboutBullets: const [
+            '2,800 Total MCQs: Comprehensive question bank organized by subject, difficulty, and year-by-year past exam trends.',
+            'Multi-Year Questions: Incorporates previous national COC licensure questions alongside model questions tailored to current curriculum blueprints.',
+            'Detailed Explanations: Every question includes a thorough step-by-step breakdown explaining why the correct choice is right and why distractors are incorrect.',
+            'Mock Practice Tests: Multi-year exam simulations to help build stamina, speed, and exam confidence.',
+          ],
+          coreCourses: const [
+            'Pharmacology & Therapeutics',
+            'Pharmaceutics & Industrial Pharmacy',
+            'Pharmaceutical Chemistry',
+            'Clinical Pharmacy & Pharmacy Practice',
+            'Public Health & Pharmacoepidemiology',
+          ],
         ),
       ];
 
@@ -150,37 +172,52 @@ class MockData {
         supportTelegram: '@dodomed',
         supportPhone: '+251 91 000 0000',
         footer: '© 2026 DODOMED · Made in Ethiopia',
+        marqueeText: '🔥 What We Offer - 2027 Pharmacy Exit Exam: 3,000+ '
+            'targeted sample questions with detailed explanations',
+        onboardingSubtitle: 'We’re thrilled to support your lifelong '
+            'learning and clinical excellence.',
       );
 
-  static const List<BankAccount> banks = [
-    BankAccount(
-      code: 'CBE',
-      name: 'Commercial Bank of Ethiopia',
-      owner: 'Yishak Abraham',
-      number: '1000641510584',
-    ),
-    BankAccount(
-      code: 'BOA',
-      name: 'Bank of Abyssinia',
-      owner: 'Yishak Abraham',
-      number: '1000641510584',
-    ),
-  ];
+  /// Seed bank accounts (payment transfer destinations). The admin panel
+  /// adds to / edits this list (in memory, or persisted online).
+  static List<BankAccount> seedBanks() => [
+        BankAccount(
+          code: 'CBE',
+          name: 'Commercial Bank of Ethiopia',
+          owner: 'Yishak Abraham',
+          number: '1000641510584',
+        ),
+        BankAccount(
+          code: 'BOA',
+          name: 'Bank of Abyssinia',
+          owner: 'Yishak Abraham',
+          number: '1000641510584',
+        ),
+      ];
 
-  static const List<String> aboutBullets = [
-    '3,000 Total MCQs: Comprehensive question bank organized by subject, difficulty, and year-by-year past exam trends.',
-    'Multi-Year Questions: Incorporates previous national exit exam and licensure questions alongside model questions tailored to current curriculum blueprints.',
-    'Detailed Explanations: Every question includes a thorough step-by-step breakdown explaining why the correct choice is right and why distractors are incorrect.',
-    'Mock Practice Tests: Multi-year exam simulations to help build stamina, speed, and exam confidence.',
-  ];
-
-  static const List<String> coreCourses = [
-    'Pharmacology & Therapeutics',
-    'Pharmaceutics & Industrial Pharmacy',
-    'Pharmaceutical Chemistry',
-    'Clinical Pharmacy & Pharmacy Practice',
-    'Public Health & Pharmacoepidemiology',
-  ];
+  /// A couple of demo threads so the Q&A screen isn't empty offline — one
+  /// already answered (shows what a professional answer looks like), one
+  /// still pending.
+  static List<QaItem> seedQaItems() => [
+        QaItem(
+          id: 'qa-demo-1',
+          askedByName: 'Aster Ali',
+          question: 'How many days after payment does it take to get access?',
+          createdAt: DateTime.now().subtract(const Duration(days: 2)),
+          answer:
+              'Access is granted as soon as our admin team verifies your '
+              'receipt — usually within a few hours. You\'ll see the pack '
+              'unlock automatically; no need to reopen the app.',
+          status: QaStatus.answered,
+          answeredAt: DateTime.now().subtract(const Duration(days: 2, hours: -3)),
+        ),
+        QaItem(
+          id: 'qa-demo-2',
+          askedByName: 'Aster Ali',
+          question: 'Can I use the e-book offline once I\'ve purchased it?',
+          createdAt: DateTime.now().subtract(const Duration(hours: 5)),
+        ),
+      ];
 
   /// A small pool that loops to simulate the full question bank. The admin
   /// panel adds to / edits this list (in memory) via [AppState].

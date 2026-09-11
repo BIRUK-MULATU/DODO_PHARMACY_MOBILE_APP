@@ -10,6 +10,7 @@ const ExamPack = require('./models/ExamPack');
 const Question = require('./models/Question');
 const EBook = require('./models/EBook');
 const AboutInfo = require('./models/AboutInfo');
+const Bank = require('./models/Bank');
 const User = require('./models/User');
 
 async function seed() {
@@ -27,6 +28,20 @@ async function seed() {
     { _id: 'nursing', name: 'Nursing', figure: 'assets/images/nurse.png' },
   ]);
 
+  const aboutBulletsTemplate = (n) => [
+    `${n.toLocaleString()} Total MCQs: Comprehensive question bank organized by subject, difficulty, and year-by-year past exam trends.`,
+    'Multi-Year Questions: Incorporates previous national exit exam and licensure questions alongside model questions tailored to current curriculum blueprints.',
+    'Detailed Explanations: Every question includes a thorough step-by-step breakdown explaining why the correct choice is right and why distractors are incorrect.',
+    'Mock Practice Tests: Multi-year exam simulations to help build stamina, speed, and exam confidence.',
+  ];
+  const coreCoursesTemplate = [
+    'Pharmacology & Therapeutics',
+    'Pharmaceutics & Industrial Pharmacy',
+    'Pharmaceutical Chemistry',
+    'Clinical Pharmacy & Pharmacy Practice',
+    'Public Health & Pharmacoepidemiology',
+  ];
+
   await ExamPack.insertMany([
     {
       _id: 'exit-3000',
@@ -36,6 +51,10 @@ async function seed() {
       questionCount: 3000,
       priceBirr: 550,
       freeLimit: 5,
+      aboutSummary:
+        'Ultimate Pharmacy Exit Exam Master Question Bank (3000+ MCQs & Detailed Explanations)',
+      aboutBullets: aboutBulletsTemplate(3000),
+      coreCourses: coreCoursesTemplate,
     },
     {
       _id: 'coc-2800',
@@ -45,6 +64,10 @@ async function seed() {
       questionCount: 2800,
       priceBirr: 450,
       freeLimit: 5,
+      aboutSummary:
+        'Ultimate Pharmacy COC Licensure Exam Master Question Bank (2800+ MCQs & Detailed Explanations)',
+      aboutBullets: aboutBulletsTemplate(2800),
+      coreCourses: coreCoursesTemplate,
     },
   ]);
 
@@ -200,9 +223,20 @@ async function seed() {
       supportTelegram: '@dodomed',
       supportPhone: '+251 91 000 0000',
       footer: '© 2026 DODOMED · Made in Ethiopia',
+      marqueeText:
+        '🔥 What We Offer - 2027 Pharmacy Exit Exam: 3,000+ targeted sample ' +
+        'questions with detailed explanations',
+      onboardingSubtitle:
+        'We’re thrilled to support your lifelong learning and clinical excellence.',
     },
     { upsert: true },
   );
+
+  await Bank.deleteMany({});
+  await Bank.insertMany([
+    { _id: 'CBE', name: 'Commercial Bank of Ethiopia', owner: 'Yishak Abraham', number: '1000641510584' },
+    { _id: 'BOA', name: 'Bank of Abyssinia', owner: 'Yishak Abraham', number: '1000641510584' },
+  ]);
 
   // Seed accounts so the app is immediately usable end to end: one learner
   // (the account the UI used to hard-code) and one admin.

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app/routes.dart';
-import '../../data/mock_data.dart';
+import '../../data/app_state.dart';
 import '../../data/models.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -26,6 +26,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final banks = AppStateScope.of(context).banks;
     return Scaffold(
       backgroundColor: AppColors.yellow,
       body: CustomScrollView(
@@ -74,22 +75,33 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                for (var i = 0; i < MockData.banks.length; i++)
-                  _BankCard(
-                    bank: MockData.banks[i],
-                    selected: _selected == i,
-                    onTap: () => setState(() => _selected = i),
-                  ),
+                if (banks.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      'No bank accounts have been set up yet — contact support.',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  )
+                else
+                  for (var i = 0; i < banks.length; i++)
+                    _BankCard(
+                      bank: banks[i],
+                      selected: _selected == i,
+                      onTap: () => setState(() => _selected = i),
+                    ),
                 const SizedBox(height: 20),
                 PrimaryButton(
                   label: 'Proceed to Receipt Upload',
-                  onPressed: () => Navigator.of(context).pushNamed(
-                    AppRoutes.payUpload,
-                    arguments: UploadReceiptArgs(
-                      pack: widget.pack,
-                      bank: MockData.banks[_selected],
-                    ),
-                  ),
+                  onPressed: banks.isEmpty
+                      ? null
+                      : () => Navigator.of(context).pushNamed(
+                            AppRoutes.payUpload,
+                            arguments: UploadReceiptArgs(
+                              pack: widget.pack,
+                              bank: banks[_selected.clamp(0, banks.length - 1)],
+                            ),
+                          ),
                 ),
               ]),
             ),

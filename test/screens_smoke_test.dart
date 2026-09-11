@@ -61,7 +61,7 @@ void main() {
     await _pump(
       t,
       UploadReceiptScreen(
-        args: UploadReceiptArgs(pack: pack, bank: MockData.banks.first),
+        args: UploadReceiptArgs(pack: pack, bank: MockData.seedBanks().first),
       ),
     );
   });

@@ -19,7 +19,18 @@ router.get('/', async (req, res) => {
 // Accepts a client-supplied `id` (see tracks.js for why) — falls back to a
 // server-generated one otherwise.
 router.post('/', requireAuth, requireAdmin, async (req, res) => {
-  const { id, title, image, questionCount, priceBirr, freeLimit, trackId } = req.body ?? {};
+  const {
+    id,
+    title,
+    image,
+    questionCount,
+    priceBirr,
+    freeLimit,
+    trackId,
+    aboutSummary,
+    aboutBullets,
+    coreCourses,
+  } = req.body ?? {};
   if (!title || questionCount === undefined || priceBirr === undefined || freeLimit === undefined) {
     return res.status(400).json({ error: 'title, questionCount, priceBirr and freeLimit are required.' });
   }
@@ -31,6 +42,9 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
     priceBirr,
     freeLimit,
     trackId: trackId ?? '',
+    aboutSummary: aboutSummary ?? '',
+    aboutBullets: aboutBullets ?? [],
+    coreCourses: coreCourses ?? [],
   });
   res.status(201).json({ pack: pack.toJSON() });
 });
@@ -38,13 +52,26 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
 router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
   const pack = await ExamPack.findById(req.params.id);
   if (!pack) return res.status(404).json({ error: 'Pack not found.' });
-  const { title, image, questionCount, priceBirr, freeLimit, trackId } = req.body ?? {};
+  const {
+    title,
+    image,
+    questionCount,
+    priceBirr,
+    freeLimit,
+    trackId,
+    aboutSummary,
+    aboutBullets,
+    coreCourses,
+  } = req.body ?? {};
   if (title !== undefined) pack.title = title;
   if (image !== undefined) pack.image = image;
   if (questionCount !== undefined) pack.questionCount = questionCount;
   if (priceBirr !== undefined) pack.priceBirr = priceBirr;
   if (freeLimit !== undefined) pack.freeLimit = freeLimit;
   if (trackId !== undefined) pack.trackId = trackId;
+  if (aboutSummary !== undefined) pack.aboutSummary = aboutSummary;
+  if (aboutBullets !== undefined) pack.aboutBullets = aboutBullets;
+  if (coreCourses !== undefined) pack.coreCourses = coreCourses;
   await pack.save();
   res.json({ pack: pack.toJSON() });
 });

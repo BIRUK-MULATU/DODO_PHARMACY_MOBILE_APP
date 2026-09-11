@@ -22,6 +22,8 @@ class _AdminAboutScreenState extends State<AdminAboutScreen> {
   late final TextEditingController _telegram;
   late final TextEditingController _phone;
   late final TextEditingController _footer;
+  late final TextEditingController _marquee;
+  late final TextEditingController _onboarding;
 
   @override
   void initState() {
@@ -35,6 +37,8 @@ class _AdminAboutScreenState extends State<AdminAboutScreen> {
     _telegram = TextEditingController(text: a.supportTelegram);
     _phone = TextEditingController(text: a.supportPhone);
     _footer = TextEditingController(text: a.footer);
+    _marquee = TextEditingController(text: a.marqueeText);
+    _onboarding = TextEditingController(text: a.onboardingSubtitle);
   }
 
   @override
@@ -48,6 +52,8 @@ class _AdminAboutScreenState extends State<AdminAboutScreen> {
       _telegram,
       _phone,
       _footer,
+      _marquee,
+      _onboarding,
     ]) {
       c.dispose();
     }
@@ -69,6 +75,8 @@ class _AdminAboutScreenState extends State<AdminAboutScreen> {
       supportTelegram: _telegram.text.trim(),
       supportPhone: _phone.text.trim(),
       footer: _footer.text.trim(),
+      marqueeText: _marquee.text.trim(),
+      onboardingSubtitle: _onboarding.text.trim(),
     ));
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -87,6 +95,8 @@ class _AdminAboutScreenState extends State<AdminAboutScreen> {
       _telegram.text = seed.supportTelegram;
       _phone.text = seed.supportPhone;
       _footer.text = seed.footer;
+      _marquee.text = seed.marqueeText;
+      _onboarding.text = seed.onboardingSubtitle;
     });
   }
 
@@ -137,6 +147,19 @@ class _AdminAboutScreenState extends State<AdminAboutScreen> {
               style: TextStyle(
                   fontSize: 12,
                   color: Colors.black.withValues(alpha: 0.5))),
+          const SizedBox(height: 20),
+          const _Hint(
+              'The rest of these show up elsewhere in the app — the promo '
+              'strip and the welcome screen. (Each exam pack has its own '
+              '"About Questions" content now — edit that from the pack\'s '
+              'own form, not here.)'),
+          const SizedBox(height: 14),
+          _label('Promo strip (loops under the header on Home/Dashboard/'
+              'Track select/E-book)'),
+          _field(_marquee, maxLines: 2),
+          const SizedBox(height: 16),
+          _label('Onboarding subtitle (under "WELCOME TO")'),
+          _field(_onboarding, maxLines: 3),
           const SizedBox(height: 20),
           FilledButton(
             style: FilledButton.styleFrom(

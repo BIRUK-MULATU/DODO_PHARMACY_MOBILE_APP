@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../app/routes.dart';
+import '../data/app_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/assets.dart';
@@ -14,6 +15,7 @@ class OnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final subtitle = AppStateScope.of(context).aboutInfo.onboardingSubtitle;
     return Scaffold(
       backgroundColor: AppColors.yellow,
       body: SafeArea(
@@ -33,7 +35,7 @@ class OnboardingScreen extends StatelessWidget {
                   Entrance(
                     delay: const Duration(milliseconds: 140),
                     child: Text(
-                      'We’re thrilled to support your lifelong learning and clinical excellence.',
+                      subtitle,
                       style: AppTheme.h2.copyWith(height: 1.25),
                     ),
                   ),

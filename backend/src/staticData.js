@@ -1,21 +1,7 @@
-// Content that mirrors the Flutter app's own asset bundle — it isn't user
-// data, so it lives as a constant here rather than in Mongo, same as
-// `MockData` did on the client before the backend existed.
-
-const banks = [
-  {
-    code: 'CBE',
-    name: 'Commercial Bank of Ethiopia',
-    owner: 'Yishak Abraham',
-    number: '1000641510584',
-  },
-  {
-    code: 'BOA',
-    name: 'Bank of Abyssinia',
-    owner: 'Yishak Abraham',
-    number: '1000641510584',
-  },
-];
+// Bundled-asset choice lists — genuinely static, since they're presets from
+// the Flutter app's own asset bundle, not editable content. Bank accounts
+// used to live here too, but are real admin-editable data now (see
+// `models/Bank.js` / `routes/banks.js`), not a constant.
 
 const trackFigures = [
   'assets/images/pharmacist.png',
@@ -47,4 +33,4 @@ const avatarChoices = [
   'assets/images/kid.png',
 ];
 
-module.exports = { banks, trackFigures, packImages, bookCovers, avatarChoices };
+module.exports = { trackFigures, packImages, bookCovers, avatarChoices };

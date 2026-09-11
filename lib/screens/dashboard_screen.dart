@@ -14,8 +14,50 @@ import '../widgets/marquee_ticker.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/wave.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  RankFetch? _rank;
+  DashboardActivity? _activity;
+  bool _activityFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final state = AppStateScope.read(context);
+
+    // Offline there's only ever one local/demo learner — fetchRank already
+    // short-circuits to `1 of 1` without a network call, so this is cheap
+    // and safe to always await.
+    try {
+      final rank = await state.fetchRank();
+      if (mounted) setState(() => _rank = rank);
+    } catch (_) {
+      // Leave _rank null — the stat card shows a loading placeholder
+      // indefinitely rather than a wrong number.
+    }
+
+    if (state.isOnline) {
+      try {
+        final activity = await state.fetchDashboardActivity();
+        if (mounted) setState(() => _activity = activity);
+      } catch (_) {
+        if (mounted) setState(() => _activityFailed = true);
+      }
+    }
+    // Offline: `_activity` stays null, and `_WeeklyBars`/`_RecentActivity`
+    // fall back to their own sample/demo content — there's no persisted
+    // history to fetch when nothing survives a restart anyway.
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +88,7 @@ class DashboardScreen extends StatelessWidget {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.only(top: 14),
+                padding: const EdgeInsets.fromLTRB(0, 14, 0, 12),
                 child: SizedBox(
                   height: 132,
                   child: ListView(
@@ -65,17 +107,17 @@ class DashboardScreen extends StatelessWidget {
                       _StatCard(
                           icon: Icons.local_fire_department,
                           label: 'Best Streak',
-                          value: state.totalCorrect),
+                          value: state.bestStreak),
                       _StatCard(
                           icon: Icons.workspace_premium,
                           label: 'Rank',
-                          value: 12),
+                          value: _rank?.rank),
                     ],
                   ),
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: MarqueeTicker()),
+            SliverToBoxAdapter(child: MarqueeTicker(text: state.aboutInfo.marqueeText)),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 120),
               sliver: SliverList.list(
@@ -92,14 +134,27 @@ class DashboardScreen extends StatelessWidget {
                     child: _ReadinessGauge(value: (accuracy / 100).clamp(0, 1)),
                   ),
                   const SizedBox(height: 18),
-                  const _Panel(
-                    title: 'This Week',
-                    child: _WeeklyBars(),
+                  _Panel(
+                    title: 'Leaderboard',
+                    child: _LeaderboardCard(rank: _rank),
                   ),
                   const SizedBox(height: 18),
-                  const _Panel(
+                  _Panel(
+                    title: 'This Week',
+                    child: _WeeklyBars(days: _activity?.week),
+                  ),
+                  const SizedBox(height: 18),
+                  _Panel(
+                    title: 'Pack Progress',
+                    child: _PackProgressList(state: state),
+                  ),
+                  const SizedBox(height: 18),
+                  _Panel(
                     title: 'Recent Activity',
-                    child: _RecentActivity(),
+                    child: _RecentActivity(
+                      entries: _activity?.recent,
+                      failed: _activityFailed,
+                    ),
                   ),
                 ]),
               ),
@@ -121,7 +176,10 @@ class _StatCard extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final int value;
+
+  /// `null` shows a loading placeholder instead of an animated count —
+  /// used for "Rank" while its real value is still being fetched.
+  final int? value;
   final String suffix;
 
   @override
@@ -142,14 +200,20 @@ class _StatCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: CountUp(
-              value: value,
-              suffix: suffix,
-              style: const TextStyle(
-                  color: AppColors.yellow,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900),
-            ),
+            child: value == null
+                ? const Text('–',
+                    style: TextStyle(
+                        color: AppColors.yellow,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900))
+                : CountUp(
+                    value: value!,
+                    suffix: suffix,
+                    style: const TextStyle(
+                        color: AppColors.yellow,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900),
+                  ),
           ),
           Text(label,
               maxLines: 1,
@@ -194,13 +258,19 @@ class _ProgressHero extends StatelessWidget {
               style:
                   const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
           const SizedBox(height: 6),
-          CountUp(
-            value: percent,
-            suffix: '%',
-            style:
-                const TextStyle(fontSize: 40, fontWeight: FontWeight.w900),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: CountUp(
+              value: percent,
+              suffix: '%',
+              style:
+                  const TextStyle(fontSize: 40, fontWeight: FontWeight.w900),
+            ),
           ),
           const Text('Great Progress',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 10),
           AnimatedProgressBar(value: percent / 100, height: 10),
@@ -274,29 +344,39 @@ class _ReadinessGauge extends StatelessWidget {
       duration: const Duration(milliseconds: 1100),
       curve: Curves.easeOutCubic,
       builder: (context, v, _) {
+        // A fixed drawing height, centered and capped to the available
+        // width — so the arc's radius is always derived consistently from
+        // both dimensions (the old version used the panel's full width for
+        // the radius while the box was only 130px tall, so the arc ballooned
+        // out and painted below/outside its own box).
         return SizedBox(
-          height: 130,
-          child: CustomPaint(
-            painter: _GaugePainter(v),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 30),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('${(v * 100).round()}',
+          height: 128,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 260),
+              child: CustomPaint(
+                painter: _GaugePainter(v),
+                child: Align(
+                  alignment: const Alignment(0, 0.45),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('${(v * 100).round()}',
+                          style: const TextStyle(
+                              fontSize: 26, fontWeight: FontWeight.w900)),
+                      Text(
+                        v < 0.4
+                            ? 'Keep practising'
+                            : v < 0.75
+                                ? 'On track'
+                                : 'Exam ready',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 28, fontWeight: FontWeight.w900)),
-                    Text(
-                      v < 0.4
-                          ? 'Keep practising'
-                          : v < 0.75
-                              ? 'On track'
-                              : 'Exam ready',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 12),
-                    ),
-                  ],
+                            fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -311,19 +391,27 @@ class _GaugePainter extends CustomPainter {
   _GaugePainter(this.value);
   final double value;
 
+  static const _strokeWidth = 16.0;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(10, 10, size.width - 20, (size.width - 20));
-    final center = Offset(size.width / 2, size.width / 2 - 5 + 10);
-    final radius = (size.width - 20) / 2;
+    // The radius is capped by BOTH dimensions, so the arc (and its rounded
+    // stroke caps) can never extend past the box it was actually given,
+    // whatever size that box turns out to be.
+    final radius = math.min(
+      size.height - _strokeWidth,
+      size.width / 2 - _strokeWidth / 2,
+    );
+    if (radius <= 0) return;
+    final center = Offset(size.width / 2, size.height - _strokeWidth / 2);
     final track = Paint()
       ..color = AppColors.ink.withValues(alpha: 0.12)
-      ..strokeWidth = 16
+      ..strokeWidth = _strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     final fill = Paint()
       ..color = AppColors.ink
-      ..strokeWidth = 16
+      ..strokeWidth = _strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
@@ -332,88 +420,289 @@ class _GaugePainter extends CustomPainter {
         false, track);
     canvas.drawArc(Rect.fromCircle(center: center, radius: radius), math.pi,
         math.pi * value, false, fill);
-    // silence unused
-    rect.toString();
   }
 
   @override
   bool shouldRepaint(covariant _GaugePainter old) => old.value != value;
 }
 
-class _WeeklyBars extends StatelessWidget {
-  const _WeeklyBars();
+/// New visualization: the caller's real leaderboard position (see
+/// `GET /api/leaderboard/me`) — a rank badge plus a relative-position bar
+/// among every learner on the account.
+class _LeaderboardCard extends StatelessWidget {
+  const _LeaderboardCard({required this.rank});
+  final RankFetch? rank;
 
   @override
   Widget build(BuildContext context) {
-    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    const values = [0.4, 0.75, 0.55, 0.9, 0.65, 0.3, 0.8];
+    final r = rank;
+    if (r == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 6),
+        child: SizedBox(
+          height: 18,
+          width: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    // 1.0 = top of the leaderboard, 0.0 = bottom.
+    final position =
+        r.totalUsers <= 1 ? 1.0 : 1 - (r.rank - 1) / (r.totalUsers - 1);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                  color: AppColors.ink, shape: BoxShape.circle),
+              child: Text('#${r.rank}',
+                  style: const TextStyle(
+                      color: AppColors.yellow,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                r.totalUsers <= 1
+                    ? "You're the only learner so far"
+                    : 'Out of ${r.totalUsers} learners',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        AnimatedProgressBar(value: position, height: 8),
+      ],
+    );
+  }
+}
+
+class _WeeklyBars extends StatelessWidget {
+  const _WeeklyBars({this.days});
+
+  /// Real per-day activity, oldest first. `null` (offline, or still loading
+  /// online) falls back to a small sample pattern instead.
+  final List<WeeklyActivityDay>? days;
+
+  @override
+  Widget build(BuildContext context) {
+    const barAreaHeight = 90.0;
+    final real = days;
+    final labels = real != null
+        ? real.map((d) => d.weekday).toList()
+        : const ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final List<double> values;
+    if (real != null) {
+      final maxCount = real.fold<int>(0, (m, d) => math.max(m, d.count));
+      values = real
+          .map((d) => maxCount == 0 ? 0.04 : (d.count / maxCount).clamp(0.04, 1.0))
+          .toList();
+    } else {
+      values = const [0.4, 0.75, 0.55, 0.9, 0.65, 0.3, 0.8];
+    }
+
     return SizedBox(
       height: 120,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          for (var i = 0; i < days.length; i++)
-            Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: values[i]),
-                  duration: Duration(milliseconds: 700 + i * 90),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, v, _) => Container(
-                    width: 22,
-                    height: 90 * v,
-                    decoration: BoxDecoration(
-                      color: AppColors.ink,
-                      borderRadius: BorderRadius.circular(8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Bar width scales with the available space instead of a fixed
+          // pixel value, so this stays proportioned on both a narrow phone
+          // and a wide/tablet frame — clamped to a sane range either way.
+          final barWidth =
+              (constraints.maxWidth / labels.length * 0.5).clamp(14.0, 30.0);
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (var i = 0; i < labels.length; i++)
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: values[i]),
+                      duration: Duration(milliseconds: 700 + i * 90),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, v, _) => Container(
+                        width: barWidth,
+                        height: barAreaHeight * v,
+                        decoration: BoxDecoration(
+                          color: AppColors.ink,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(labels[i],
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 12)),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Text(days[i],
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 12)),
-              ],
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _RecentActivity extends StatelessWidget {
-  const _RecentActivity();
+/// New visualization: a progress bar per exam pack, so a learner working
+/// across several tracks/packs can see all of them at a glance instead of
+/// only the primary one in the hero card above.
+class _PackProgressList extends StatelessWidget {
+  const _PackProgressList({required this.state});
+  final AppState state;
 
   @override
   Widget build(BuildContext context) {
+    final packs = state.examPacks;
+    if (packs.isEmpty) {
+      return const Text('No exam packs yet.',
+          style: TextStyle(fontWeight: FontWeight.w600));
+    }
+    return Column(
+      children: [
+        for (var i = 0; i < packs.length; i++)
+          Padding(
+            padding: EdgeInsets.only(bottom: i == packs.length - 1 ? 0 : 14),
+            child: _PackProgressRow(
+              title: packs[i].title,
+              value: state.progress(packs[i]),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _PackProgressRow extends StatelessWidget {
+  const _PackProgressRow({required this.title, required this.value});
+  final String title;
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 13)),
+            ),
+            const SizedBox(width: 8),
+            Text('${(value * 100).round()}%',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 13)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        AnimatedProgressBar(value: value, height: 8),
+      ],
+    );
+  }
+}
+
+class _RecentActivity extends StatelessWidget {
+  const _RecentActivity({this.entries, this.failed = false});
+
+  /// Real answer history, newest first. `null` (offline, or still loading
+  /// online) falls back to a small sample instead.
+  final List<ActivityEntry>? entries;
+  final bool failed;
+
+  static String _relativeTime(DateTime at) {
+    final diff = DateTime.now().difference(at);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final real = entries;
+
+    if (real == null && failed) {
+      return const Text("Couldn't load recent activity.",
+          style: TextStyle(fontWeight: FontWeight.w600));
+    }
+
+    if (real != null) {
+      if (real.isEmpty) {
+        return const Text('Answer a question to see it here.',
+            style: TextStyle(fontWeight: FontWeight.w600));
+      }
+      return Column(
+        children: [
+          for (final e in real.take(5))
+            _ActivityRow(
+              title: e.packTitle,
+              correct: e.wasCorrect,
+              trailing: _relativeTime(e.at),
+            ),
+        ],
+      );
+    }
+
+    // Offline (or the online fetch hasn't resolved yet): a small sample so
+    // the panel isn't empty while real history loads/doesn't exist.
     const rows = [
-      ('Pharmacology', 'Correct', true),
-      ('Clinical Pharmacy', 'Wrong', false),
-      ('Public Health', 'Correct', true),
+      ('Pharmacology', true),
+      ('Clinical Pharmacy', false),
+      ('Public Health', true),
     ];
     return Column(
       children: [
         for (final r in rows)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Icon(r.$3 ? Icons.check_circle : Icons.cancel,
-                    color: r.$3 ? AppColors.correct : AppColors.wrong,
-                    size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: Text(r.$1,
-                        style: const TextStyle(fontWeight: FontWeight.w600))),
-                Text(r.$2,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: r.$3 ? AppColors.correct : AppColors.wrong)),
-              ],
-            ),
-          ),
+          _ActivityRow(title: r.$1, correct: r.$2),
       ],
+    );
+  }
+}
+
+class _ActivityRow extends StatelessWidget {
+  const _ActivityRow({required this.title, required this.correct, this.trailing});
+  final String title;
+  final bool correct;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(correct ? Icons.check_circle : Icons.cancel,
+              color: correct ? AppColors.correct : AppColors.wrong, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(width: 8),
+          Text(trailing ?? (correct ? 'Correct' : 'Wrong'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: correct ? AppColors.correct : AppColors.wrong)),
+        ],
+      ),
     );
   }
 }

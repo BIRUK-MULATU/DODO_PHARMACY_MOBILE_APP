@@ -41,7 +41,7 @@ class EBookScreen extends StatelessWidget {
                     AppRoutes.goToSection(context, AppRoutes.profile),
               ),
             ),
-            const SliverToBoxAdapter(child: MarqueeTicker()),
+            SliverToBoxAdapter(child: MarqueeTicker(text: state.aboutInfo.marqueeText)),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 22, 20, 120),
               sliver: SliverList.list(

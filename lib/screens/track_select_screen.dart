@@ -45,7 +45,7 @@ class TrackSelectScreen extends StatelessWidget {
                 trailingLogo: true,
               ),
             ),
-            const SliverToBoxAdapter(child: MarqueeTicker()),
+            SliverToBoxAdapter(child: MarqueeTicker(text: state.aboutInfo.marqueeText)),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               sliver: SliverList.list(

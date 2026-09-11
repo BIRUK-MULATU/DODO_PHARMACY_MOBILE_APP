@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../app/routes.dart';
-import '../data/mock_data.dart';
 import '../data/models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -16,6 +15,9 @@ class AboutQuestionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final summary = pack.aboutSummary.isNotEmpty
+        ? pack.aboutSummary
+        : '${pack.title} (${pack.questionCount}+ MCQs & Detailed Explanations)';
     return Scaffold(
       backgroundColor: AppColors.yellow,
       body: Stack(
@@ -27,21 +29,22 @@ class AboutQuestionsScreen extends StatelessWidget {
                   children: [
                     AppImage(
                       pack.image,
-                      height: 300,
+                      height: 260,
                       width: double.infinity,
                       fit: BoxFit.cover,
                     ),
                     Positioned.fill(
                       child: SafeArea(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _RoundArrow(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: _RoundArrow(
                               icon: Icons.chevron_left,
                               onTap: () => Navigator.of(context).maybePop(),
                             ),
-                            _RoundArrow(icon: Icons.chevron_right, onTap: () {}),
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -49,51 +52,58 @@ class AboutQuestionsScreen extends StatelessWidget {
                 ),
               ),
               SliverToBoxAdapter(
-                child: Transform.translate(
-                  offset: const Offset(0, -22),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: AppColors.yellowOlive,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.ink, width: 1.5),
-                      ),
-                      child: Text(
-                        pack.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1,
-                          color: AppColors.ink,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.yellowOlive,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.ink, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.ink.withValues(alpha: 0.12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
+                      ],
+                    ),
+                    child: Text(
+                      pack.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                        color: AppColors.ink,
                       ),
                     ),
                   ),
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
                 sliver: SliverList.list(
                   children: staggered([
                     const Text('About Questions', style: AppTheme.h1),
                     const SizedBox(height: 14),
                     Text(
-                      'Ultimate Pharmacy Exit Exam Master Question Bank '
-                      '(${pack.questionCount}+ MCQs & Detailed Explanations)',
+                      summary,
                       style: AppTheme.label.copyWith(fontSize: 17, height: 1.3),
                     ),
                     const SizedBox(height: 14),
-                    for (final b in MockData.aboutBullets) _Bullet(b),
-                    const SizedBox(height: 14),
-                    const Text('Core Courses Covered',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 6),
-                    for (final c in MockData.coreCourses) _Bullet(c),
+                    for (final b in pack.aboutBullets) _Bullet(b),
+                    if (pack.coreCourses.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      const Text('Core Courses Covered',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 6),
+                      for (final c in pack.coreCourses) _Bullet(c),
+                    ],
                   ]),
                 ),
               ),

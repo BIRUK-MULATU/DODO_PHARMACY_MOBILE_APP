@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Needed at runtime (not just for `flutter run`'s debug/profile builds,
+         which get it from src/debug and src/profile) — without this, a
+         release APK can't reach the backend at all: signup/login, the exam
+         paywall, payments, everything that talks to the API silently fails. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="DODOMED"
         android:name="${applicationName}"

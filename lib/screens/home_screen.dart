@@ -41,7 +41,7 @@ class HomeScreen extends StatelessWidget {
                     AppRoutes.goToSection(context, AppRoutes.profile),
               ),
             ),
-            const SliverToBoxAdapter(child: MarqueeTicker()),
+            SliverToBoxAdapter(child: MarqueeTicker(text: state.aboutInfo.marqueeText)),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(18, 20, 18, 120),
               sliver: SliverList.list(

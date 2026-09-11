@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../data/app_state.dart';
-import '../data/mock_data.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/app_drawer.dart';
@@ -102,80 +101,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // Only source for a profile picture is the device's own photo picker — no
+  // preset-avatar fallback, so tapping the avatar goes straight to it
+  // instead of opening a sheet with a choice to make.
   Future<void> _pickAvatar() async {
     final state = AppStateScope.read(context);
+    String? uri;
     var pickError = false;
-
-    final chosen = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppColors.yellow,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Profile picture',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.ink,
-                    foregroundColor: AppColors.yellow,
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  onPressed: () async {
-                    String? uri;
-                    try {
-                      uri = await pickImageAsDataUri(maxWidth: 600);
-                    } catch (_) {
-                      pickError = true;
-                    }
-                    if (sheetContext.mounted) {
-                      Navigator.pop(sheetContext, uri);
-                    }
-                  },
-                  icon: const Icon(Icons.add_a_photo_rounded, size: 18),
-                  label: const Text('Choose from device',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Text('…or pick one of these',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 14,
-                runSpacing: 14,
-                children: [
-                  if (AppImage.isUploaded(state.profile.avatar))
-                    _AvatarChoice(
-                      source: state.profile.avatar,
-                      selected: true,
-                      onTap: () =>
-                          Navigator.pop(sheetContext, state.profile.avatar),
-                    ),
-                  for (final a in MockData.avatarChoices)
-                    _AvatarChoice(
-                      source: a,
-                      selected: state.profile.avatar == a,
-                      onTap: () => Navigator.pop(sheetContext, a),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    try {
+      uri = await pickImageAsDataUri(maxWidth: 600);
+    } catch (_) {
+      pickError = true;
+    }
 
     if (!mounted) return;
     if (pickError) {
@@ -184,8 +121,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       return;
     }
-    if (chosen != null) {
-      state.setAvatar(chosen);
+    if (uri != null) {
+      state.setAvatar(uri);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile picture updated')),
       );
@@ -440,36 +377,3 @@ class _PillButton extends StatelessWidget {
   }
 }
 
-class _AvatarChoice extends StatelessWidget {
-  const _AvatarChoice({
-    required this.source,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String source;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 72,
-        height: 72,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: selected ? AppColors.ink : Colors.transparent,
-            width: 3,
-          ),
-          image: DecorationImage(
-            image: AppImage.provider(source),
-            fit: BoxFit.cover,
-          ),
-        ),
-      ),
-    );
-  }
-}

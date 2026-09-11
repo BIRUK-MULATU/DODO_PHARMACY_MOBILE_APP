@@ -44,6 +44,7 @@ void main() {
     expect(inDrawer('Profile'), findsOneWidget);
     expect(inDrawer('Dashboard'), findsOneWidget);
     expect(inDrawer('E-Book'), findsOneWidget);
+    expect(inDrawer('Q&A'), findsOneWidget);
     expect(inDrawer('About'), findsOneWidget);
     expect(inDrawer('Log Out'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -54,6 +55,21 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
     expect(find.text('DODOMED'), findsOneWidget);
     expect(find.textContaining('study companion'), findsOneWidget);
+    nav.pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    // "Q&A" opens the ask-a-question page.
+    await tester.tap(find.byIcon(Icons.menu).first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.tap(inDrawer('Q&A'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    expect(find.text('Q&A'), findsWidgets);
+    expect(find.text('Send'), findsOneWidget);
+    expect(tester.takeException(), isNull);
     nav.pop();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));

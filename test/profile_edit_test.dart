@@ -1,8 +1,12 @@
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:dodo_pharmacy_mobile_app/data/app_state.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/profile_screen.dart';
+import 'package:dodo_pharmacy_mobile_app/widgets/app_image.dart';
+
+import 'support/fake_file_selector.dart';
 
 void main() {
   testWidgets('profile edit header fits a narrow phone without overflow',
@@ -108,25 +112,39 @@ void main() {
     expect(state.profile.avatar, uploaded);
   });
 
-  testWidgets('the avatar picker offers "Choose from device"', (tester) async {
+  testWidgets(
+      'tapping the avatar goes straight to the device picker — no preset choice',
+      (tester) async {
     tester.view.physicalSize = const Size(600, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    final previous = installFakeFileSelector();
+    addTearDown(() => FileSelectorPlatform.instance = previous);
+
+    final state = AppState();
     await tester.pumpWidget(
       AppStateScope(
-        state: AppState(),
+        state: state,
         child: const MaterialApp(home: ProfileScreen()),
       ),
     );
     await tester.pump(const Duration(milliseconds: 800));
 
-    // Tap the camera badge on the avatar.
+    // Tap the camera badge on the avatar — used to open a sheet offering
+    // "Choose from device" or a preset; now it opens the device picker
+    // directly, with no sheet and no preset choice at all.
     await tester.tap(find.byIcon(Icons.camera_alt));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    // Image decoding runs on the engine's real thread pool — needs runAsync.
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Choose from device'), findsOneWidget);
-    expect(find.text('Profile picture'), findsOneWidget);
+    expect(find.text('Choose from device'), findsNothing);
+    expect(find.text('…or pick one of these'), findsNothing);
+    expect(AppImage.isUploaded(state.profile.avatar), isTrue);
+    expect(find.text('Profile picture updated'), findsOneWidget);
   });
 }

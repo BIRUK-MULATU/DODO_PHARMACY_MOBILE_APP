@@ -88,12 +88,10 @@ router.post('/packs/:packId/questions/:index/answer', requireAuth, async (req, r
   });
 });
 
-// Persists the answered/correct counts the client already tracked and
-// computed itself (`AppState.recordAnswer`) — trusted the same way the rest
-// of this app's client-reported data is (see "The paywall" in the README).
-// Used so progress survives a restart / follows the account across devices;
-// the stricter, index-checked `/answer` above is the not-yet-adopted
-// alternative that would make this redundant.
+// Superseded by POST /packs/:packId/record-answer below (which does this
+// same progress update plus streak/activity tracking in one call) — kept
+// around, tested, and still fully functional, but the app no longer calls
+// this one.
 router.put('/packs/:packId/progress', requireAuth, async (req, res) => {
   const pack = await ExamPack.findById(req.params.packId);
   if (!pack) return res.status(404).json({ error: 'Pack not found.' });
@@ -104,6 +102,84 @@ router.put('/packs/:packId/progress', requireAuth, async (req, res) => {
   req.user.progress.set(pack.id, { answered, correct });
   await req.user.save();
   res.json({ ok: true });
+});
+
+// What AppState.recordAnswer actually calls: the single event that drives
+// every dashboard visualization that isn't purely derived from `progress`.
+// `wasCorrect` is trusted the same way the rest of this app's
+// client-reported data is (see "The paywall" in the README) — the client
+// already has the real question/answer in hand by the time this fires.
+router.post('/packs/:packId/record-answer', requireAuth, async (req, res) => {
+  const pack = await ExamPack.findById(req.params.packId);
+  if (!pack) return res.status(404).json({ error: 'Pack not found.' });
+  const { wasCorrect, packTitle } = req.body ?? {};
+  if (typeof wasCorrect !== 'boolean') {
+    return res.status(400).json({ error: 'wasCorrect must be a boolean.' });
+  }
+  const user = req.user;
+
+  const current = progressFor(user, pack.id);
+  user.progress.set(pack.id, {
+    answered: current.answered + 1,
+    correct: current.correct + (wasCorrect ? 1 : 0),
+  });
+
+  if (wasCorrect) {
+    user.currentStreak = (user.currentStreak || 0) + 1;
+    user.bestStreak = Math.max(user.bestStreak || 0, user.currentStreak);
+  } else {
+    user.currentStreak = 0;
+  }
+
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const dailyActivity = user.dailyActivity || new Map();
+  dailyActivity.set(dayKey, (dailyActivity.get(dayKey) || 0) + 1);
+  user.dailyActivity = dailyActivity;
+
+  const entry = {
+    packId: pack.id,
+    packTitle: packTitle || pack.title,
+    wasCorrect,
+    at: new Date(),
+  };
+  user.recentActivity = [entry, ...(user.recentActivity || [])].slice(0, 20);
+
+  await user.save();
+
+  res.json({
+    answered: user.progress.get(pack.id).answered,
+    correct: user.progress.get(pack.id).correct,
+    currentStreak: user.currentStreak,
+    bestStreak: user.bestStreak,
+  });
+});
+
+const _weekdayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // Date#getDay(): 0=Sun
+
+// Backs the dashboard's "This Week" bars and "Recent Activity" list.
+router.get('/activity', requireAuth, async (req, res) => {
+  const user = req.user;
+  const today = new Date();
+  const week = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    week.push({
+      date: key,
+      weekday: _weekdayLetters[d.getDay()],
+      count: (user.dailyActivity || new Map()).get(key) || 0,
+    });
+  }
+  res.json({
+    week,
+    recent: (user.recentActivity || []).map((e) => ({
+      packId: e.packId,
+      packTitle: e.packTitle,
+      wasCorrect: e.wasCorrect,
+      at: e.at,
+    })),
+  });
 });
 
 module.exports = router;

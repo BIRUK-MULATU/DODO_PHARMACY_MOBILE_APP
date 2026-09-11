@@ -8,6 +8,18 @@ const progressEntrySchema = new mongoose.Schema(
   { _id: false },
 );
 
+// One entry per question answered (capped — see routes/exam.js), newest
+// first, for the dashboard's "Recent Activity" panel.
+const activityEntrySchema = new mongoose.Schema(
+  {
+    packId: { type: String, required: true },
+    packTitle: { type: String, required: true },
+    wasCorrect: { type: Boolean, required: true },
+    at: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -32,6 +44,17 @@ const userSchema = new mongoose.Schema(
     },
 
     uploadAttempts: { type: Number, default: 0 },
+
+    // Longest/current run of consecutive correct answers across every pack
+    // (a global "study streak", not per-pack) — see routes/exam.js.
+    currentStreak: { type: Number, default: 0 },
+    bestStreak: { type: Number, default: 0 },
+
+    // date ('YYYY-MM-DD') -> questions answered that day, for the
+    // dashboard's "This Week" chart. Only the last 7 days are ever read.
+    dailyActivity: { type: Map, of: Number, default: () => new Map() },
+
+    recentActivity: { type: [activityEntrySchema], default: [] },
   },
   { timestamps: true },
 );

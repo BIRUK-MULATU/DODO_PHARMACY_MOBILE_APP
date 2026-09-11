@@ -5,6 +5,9 @@ import 'package:dodo_pharmacy_mobile_app/app/routes.dart';
 import 'package:dodo_pharmacy_mobile_app/data/app_state.dart';
 import 'package:dodo_pharmacy_mobile_app/data/mock_data.dart';
 import 'package:dodo_pharmacy_mobile_app/data/models.dart';
+import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_bank_form_screen.dart';
+import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_banks_screen.dart';
+import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_pack_form_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_packs_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_payments_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_questions_screen.dart';
@@ -186,6 +189,36 @@ void main() {
     expect(s.examPacks.last.questionCount, 4000);
   });
 
+  testWidgets(
+      "admin sets a pack's own About Questions content through the form",
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final s = AppState();
+    final pack = s.examPacks.first;
+
+    await tester.pumpWidget(_host(s, AdminPackFormScreen(pack: pack)));
+    await tester.pump();
+
+    final fields = find.byType(TextFormField);
+    // 0: title, 1: bank size, 2: free, 3: price, 4: about summary,
+    // 5: about bullets, 6: core courses.
+    await tester.enterText(fields.at(4), 'A brand new summary line');
+    await tester.enterText(fields.at(5), 'Custom bullet one\nCustom bullet two');
+    await tester.enterText(fields.at(6), 'Custom course one');
+
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    final saved = s.packById(pack.id)!;
+    expect(saved.aboutSummary, 'A brand new summary line');
+    expect(saved.aboutBullets, ['Custom bullet one', 'Custom bullet two']);
+    expect(saved.coreCourses, ['Custom course one']);
+  });
+
   testWidgets('admin tracks screen lists the seeded tracks and can delete',
       (tester) async {
     tester.view.physicalSize = const Size(600, 1200);
@@ -207,5 +240,50 @@ void main() {
     await tester.pump();
 
     expect(s.tracks.map((t) => t.name), isNot(contains('Nursing')));
+  });
+
+  testWidgets('admin banks screen lists the seeded banks and can delete',
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final s = AppState();
+    await tester.pumpWidget(_host(s, const AdminBanksScreen()));
+    await tester.pump();
+
+    expect(find.textContaining('CBE'), findsOneWidget);
+    expect(find.textContaining('BOA'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.delete_outline).last);
+    await tester.pump();
+    await tester.tap(find.text('Delete'));
+    await tester.pump();
+
+    expect(s.banks.map((b) => b.code), isNot(contains('BOA')));
+  });
+
+  testWidgets('admin adds a bank account through the form', (tester) async {
+    tester.view.physicalSize = const Size(600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final s = AppState();
+    final before = s.banks.length;
+    await tester.pumpWidget(_host(s, const AdminBankFormScreen()));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'AWASH');
+    await tester.enterText(find.byType(TextFormField).at(1), 'Awash Bank');
+    await tester.enterText(find.byType(TextFormField).at(2), 'Test Owner');
+    await tester.enterText(find.byType(TextFormField).at(3), '55555');
+    await tester.tap(find.text('Add bank'));
+    await tester.pump();
+
+    expect(s.banks.length, before + 1);
+    expect(s.banks.last.code, 'AWASH');
+    expect(s.banks.last.name, 'Awash Bank');
   });
 }

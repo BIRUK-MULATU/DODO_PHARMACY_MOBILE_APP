@@ -92,6 +92,28 @@ class AdminHomeScreen extends StatelessWidget {
             subtitle: 'Edit the app info shown in the side drawer',
             onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminAbout),
           ),
+          const SizedBox(height: 12),
+          AdminTile(
+            icon: Icons.account_balance_rounded,
+            title: 'Bank accounts',
+            subtitle:
+                '${state.banks.length} account(s) · where users pay from',
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminBanks),
+          ),
+          const SizedBox(height: 12),
+          AdminTile(
+            icon: Icons.people_alt_rounded,
+            title: 'Users',
+            subtitle: 'Every account · dated activity · open/close access',
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminUsers),
+          ),
+          const SizedBox(height: 12),
+          AdminTile(
+            icon: Icons.forum_rounded,
+            title: 'Q&A',
+            subtitle: 'Answer questions learners ask from the app',
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminQa),
+          ),
           const SizedBox(height: 20),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(

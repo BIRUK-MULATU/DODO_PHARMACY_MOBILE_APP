@@ -1,0 +1,33 @@
+# systemd unit for running the DODOMED backend as a supervised, auto-restarting
+# service on a Linux server. Not used by local development (`npm start` /
+# `npm run dev` there) — this is for a real deploy.
+#
+# Install:
+#   sudo cp backend/deploy/dodomed-backend.service /etc/systemd/system/
+#   # edit User=, WorkingDirectory=, and EnvironmentFile= below to match the
+#   # server first — the values here are placeholders.
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now dodomed-backend
+#
+# Logs: journalctl -u dodomed-backend -f
+
+[Unit]
+Description=DODOMED backend (Express + MongoDB API)
+After=network.target mongod.service
+Wants=mongod.service
+
+[Service]
+Type=simple
+User=dodomed
+WorkingDirectory=/opt/dodomed/backend
+EnvironmentFile=/opt/dodomed/backend/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+# Don't let one crashing instance spin forever — after 5 restarts within 60s,
+# systemd gives up and leaves it stopped (visible via `systemctl status`).
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

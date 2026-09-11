@@ -18,6 +18,7 @@ import 'package:dodo_pharmacy_mobile_app/screens/profile_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/results_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/signup_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/track_select_screen.dart';
+import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_banks_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_home_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_about_screen.dart';
 import 'package:dodo_pharmacy_mobile_app/screens/admin/admin_books_screen.dart';
@@ -70,7 +71,7 @@ void main() {
     'pay prompt': () => PaymentPromptScreen(pack: pack),
     'pay method': () => PaymentMethodScreen(pack: pack),
     'upload receipt': () => UploadReceiptScreen(
-        args: UploadReceiptArgs(pack: pack, bank: MockData.banks.first)),
+        args: UploadReceiptArgs(pack: pack, bank: MockData.seedBanks().first)),
     'admin home': () => const AdminHomeScreen(),
     'admin about': () => const AdminAboutScreen(),
     'admin books': () => const AdminBooksScreen(),
@@ -78,6 +79,7 @@ void main() {
     'admin tracks': () => const AdminTracksScreen(),
     'admin payments': () => const AdminPaymentsScreen(),
     'admin questions': () => const AdminQuestionsScreen(),
+    'admin banks': () => const AdminBanksScreen(),
   };
 
   // (width, height, text-scale) — the smallest phone we support up to a large

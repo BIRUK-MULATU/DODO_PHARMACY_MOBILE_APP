@@ -5,14 +5,12 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Full question content — same trust model the in-memory `AppState` always
-// used (every question, including `correctIndex`/`explanation`, sat in the
-// client's memory; the free-question paywall was, and still is, enforced by
-// `AppState.questionLocked`/`maxReachableIndex`, not by withholding
-// content). `/api/exam` below is a stricter, gate-on-the-server alternative
-// that isn't wired into the app yet — see backend/README.md. Mutating verbs
-// stay admin-only.
-router.get('/', requireAuth, async (req, res) => {
+// Full question content, including every `correctIndex`/`explanation` — for
+// the admin question-bank CRUD screens only. A learner's exam instead fetches
+// one gated question at a time through `/api/exam` (see "The paywall" in
+// backend/README.md), which never lets a locked question's content leave
+// the server at all.
+router.get('/', requireAuth, requireAdmin, async (req, res) => {
   const filter = {};
   if (req.query.packId) filter.packId = req.query.packId;
   const questions = await Question.find(filter).sort({ number: 1 });

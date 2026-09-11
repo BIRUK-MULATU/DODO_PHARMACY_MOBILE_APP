@@ -16,6 +16,122 @@ const _tokenPrefsKey = 'dodomed_auth_token';
 /// only a value the user actually typed gets sent to the server.
 const hiddenPasswordPlaceholder = '••••••';
 
+/// Result of [AppState.fetchExamQuestion] — exactly one of `locked` or
+/// `question` is meaningful: a locked index never carries question content.
+class ExamQuestionFetch {
+  const ExamQuestionFetch({required this.locked, required this.question});
+  final bool locked;
+  final Question? question;
+}
+
+/// Result of [AppState.fetchBookDetail] — [book]'s `pages`/PDF are truncated
+/// to the free preview unless [unlocked].
+class BookDetailFetch {
+  const BookDetailFetch({required this.book, required this.unlocked});
+  final EBook book;
+  final bool unlocked;
+}
+
+/// One day's worth of dashboard "This Week" activity.
+class WeeklyActivityDay {
+  const WeeklyActivityDay({required this.weekday, required this.count});
+  final String weekday; // a single letter: M, T, W, …
+  final int count;
+}
+
+/// One entry in the dashboard's "Recent Activity" list — a single question
+/// that was actually answered, not a fabricated example.
+class ActivityEntry {
+  const ActivityEntry({
+    required this.packTitle,
+    required this.wasCorrect,
+    required this.at,
+  });
+  final String packTitle;
+  final bool wasCorrect;
+  final DateTime at;
+}
+
+/// Result of [AppState.fetchDashboardActivity].
+class DashboardActivity {
+  const DashboardActivity({required this.week, required this.recent});
+  final List<WeeklyActivityDay> week;
+  final List<ActivityEntry> recent;
+}
+
+/// Result of [AppState.fetchRank] — 1-based position on the leaderboard.
+class RankFetch {
+  const RankFetch({required this.rank, required this.totalUsers});
+  final int rank;
+  final int totalUsers;
+}
+
+/// One row on the admin "Users" page — a summary of a real account. See
+/// [AppState.fetchAllUsers].
+class AdminUserSummary {
+  const AdminUserSummary({
+    required this.id,
+    required this.name,
+    required this.username,
+    required this.email,
+    required this.phone,
+    required this.avatar,
+    required this.role,
+    required this.createdAt,
+    required this.unlockedPacks,
+    required this.totalAnswered,
+    required this.totalCorrect,
+    required this.currentStreak,
+    required this.bestStreak,
+  });
+
+  final String id;
+  final String name;
+  final String username;
+  final String email;
+  final String phone;
+  final String avatar;
+  final String role;
+  final DateTime createdAt;
+  final List<String> unlockedPacks;
+  final int totalAnswered;
+  final int totalCorrect;
+  final int currentStreak;
+  final int bestStreak;
+
+  bool get isAdmin => role == 'admin';
+
+  factory AdminUserSummary.fromJson(Map<String, dynamic> json) => AdminUserSummary(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        username: json['username'] as String,
+        email: json['email'] as String,
+        phone: json['phone'] as String? ?? '',
+        avatar: json['avatar'] as String? ?? 'assets/images/avatar.png',
+        role: json['role'] as String? ?? 'user',
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        unlockedPacks: (json['unlockedPacks'] as List? ?? const []).cast<String>(),
+        totalAnswered: json['totalAnswered'] as int? ?? 0,
+        totalCorrect: json['totalCorrect'] as int? ?? 0,
+        currentStreak: json['currentStreak'] as int? ?? 0,
+        bestStreak: json['bestStreak'] as int? ?? 0,
+      );
+}
+
+/// Result of [AppState.fetchUserActivity] — one user's real activity, for
+/// the admin "Users" detail page (same shape as the dashboard's own
+/// activity, just for an arbitrary user rather than the caller).
+class AdminUserActivity {
+  const AdminUserActivity({
+    required this.user,
+    required this.week,
+    required this.recent,
+  });
+  final AdminUserSummary user;
+  final List<WeeklyActivityDay> week;
+  final List<ActivityEntry> recent;
+}
+
 /// App-wide state held in memory, exposed to the widget tree through
 /// [AppStateScope]. By default (`api == null`) it behaves exactly as it
 /// always did — seeded from [MockData], fully offline/in-memory, which is
@@ -54,8 +170,19 @@ class AppState extends ChangeNotifier {
   /// The live question bank. Seeded from [MockData]; the admin panel mutates it.
   List<Question> questions = MockData.seedQuestions();
 
+  /// The live bank accounts users transfer payment to. Seeded from
+  /// [MockData]; the admin panel mutates it.
+  List<BankAccount> banks = MockData.seedBanks();
+
   /// Receipts uploaded by users, for the admin to approve or reject.
   final List<PaymentRequest> paymentRequests = [];
+
+  /// The current user's own Q&A thread — questions they've asked and any
+  /// answers back. Seeded with a couple of demo entries so the screen isn't
+  /// empty offline; online, [fetchMyQuestions] replaces this with the real
+  /// thread. The admin "all questions" view is fetched separately (see
+  /// [fetchAllQuestions]) since offline there's only ever this one learner.
+  List<QaItem> qaItems = MockData.seedQaItems();
 
   /// Set once a real backend session starts (see class doc). `null` means
   /// fully offline/in-memory — every existing screen and test behaves
@@ -86,6 +213,13 @@ class AppState extends ChangeNotifier {
   final Set<String> _unlocked = {};
 
   int uploadAttempts = 0;
+
+  /// The current and longest-ever run of consecutive correct answers,
+  /// across every pack (a single global "study streak", not per-pack).
+  /// Tracked locally in [recordAnswer] regardless of online/offline mode —
+  /// this one is real either way, not just when there's a backend.
+  int currentStreak = 0;
+  int bestStreak = 0;
 
   /// Offline/demo login — no backend involved. Still used by tests and by
   /// any flow that hasn't been wired to the real API.
@@ -206,6 +340,8 @@ class AppState extends ChangeNotifier {
     );
     isAdmin = user['role'] == 'admin';
     uploadAttempts = user['uploadAttempts'] as int? ?? 0;
+    currentStreak = user['currentStreak'] as int? ?? 0;
+    bestStreak = user['bestStreak'] as int? ?? 0;
     _unlocked
       ..clear()
       ..addAll((user['unlockedPacks'] as List? ?? const []).cast<String>());
@@ -230,7 +366,12 @@ class AppState extends ChangeNotifier {
       client.get('/packs'),
       client.get('/books'),
       client.get('/about'),
-      client.get('/questions'),
+      client.get('/banks'),
+      // Full question content (including every answer) is only fetched in
+      // bulk for an admin session, for the question-bank CRUD screens. A
+      // learner's exam instead fetches one gated question at a time via
+      // `fetchExamQuestion` — see "The paywall" in backend/README.md.
+      if (isAdmin) client.get('/questions'),
     ]);
     tracks = ((results[0] as Map)['tracks'] as List)
         .map((j) => Track.fromJson(j as Map<String, dynamic>))
@@ -243,9 +384,14 @@ class AppState extends ChangeNotifier {
         .toList();
     final aboutJson = (results[3] as Map)['about'];
     if (aboutJson != null) aboutInfo = AboutInfo.fromJson(aboutJson as Map<String, dynamic>);
-    questions = ((results[4] as Map)['questions'] as List)
-        .map((j) => Question.fromJson(j as Map<String, dynamic>))
+    banks = ((results[4] as Map)['banks'] as List)
+        .map((j) => BankAccount.fromJson(j as Map<String, dynamic>))
         .toList();
+    questions = isAdmin
+        ? ((results[5] as Map)['questions'] as List)
+            .map((j) => Question.fromJson(j as Map<String, dynamic>))
+            .toList()
+        : [];
     if (tracks.isNotEmpty && !tracks.any((t) => t.id == trackId)) {
       trackId = tracks.first.id;
     }
@@ -295,7 +441,54 @@ class AppState extends ChangeNotifier {
       'supportTelegram': value.supportTelegram,
       'supportPhone': value.supportPhone,
       'footer': value.footer,
+      'marqueeText': value.marqueeText,
+      'onboardingSubtitle': value.onboardingSubtitle,
     }).catchError((Object e) => _syncFailed(e));
+    notifyListeners();
+  }
+
+  // --- Bank accounts (admin CRUD) ---------------------------------------
+
+  BankAccount? bankByCode(String code) {
+    for (final b in banks) {
+      if (b.code == code) return b;
+    }
+    return null;
+  }
+
+  void addBank(BankAccount b) {
+    banks.add(b);
+    api?.post('/banks', {
+      'id': b.code,
+      'name': b.name,
+      'owner': b.owner,
+      'number': b.number,
+    }).catchError((Object e) {
+      _syncFailed(e);
+    });
+    notifyListeners();
+  }
+
+  void updateBank(BankAccount b) {
+    final i = banks.indexWhere((e) => e.code == b.code);
+    if (i != -1) {
+      banks[i] = b;
+      api?.put('/banks/${b.code}', {
+        'name': b.name,
+        'owner': b.owner,
+        'number': b.number,
+      }).catchError((Object e) {
+        _syncFailed(e);
+      });
+      notifyListeners();
+    }
+  }
+
+  void deleteBank(String code) {
+    banks.removeWhere((b) => b.code == code);
+    api?.delete('/banks/$code').catchError((Object e) {
+      _syncFailed(e);
+    });
     notifyListeners();
   }
 
@@ -374,6 +567,9 @@ class AppState extends ChangeNotifier {
       'questionCount': pack.questionCount,
       'priceBirr': pack.priceBirr,
       'freeLimit': pack.freeLimit,
+      'aboutSummary': pack.aboutSummary,
+      'aboutBullets': pack.aboutBullets,
+      'coreCourses': pack.coreCourses,
     }).catchError((Object e) => _syncFailed(e));
     notifyListeners();
   }
@@ -389,6 +585,9 @@ class AppState extends ChangeNotifier {
         'questionCount': pack.questionCount,
         'priceBirr': pack.priceBirr,
         'freeLimit': pack.freeLimit,
+        'aboutSummary': pack.aboutSummary,
+        'aboutBullets': pack.aboutBullets,
+        'coreCourses': pack.coreCourses,
       }).catchError((Object e) => _syncFailed(e));
       notifyListeners();
     }
@@ -472,6 +671,21 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Fetches a single book's full-or-gated content — server-gated when
+  /// online (the catalog's bulk `books` list only ever carries metadata for
+  /// a non-admin session — see `_loadCatalog` — so this is the only source
+  /// of page/PDF content for a learner reading a book online). Callers
+  /// should only use this when [isOnline]; offline callers already have
+  /// full content via [bookById].
+  Future<BookDetailFetch> fetchBookDetail(String bookId) async {
+    final res = await api!.get('/books/$bookId') as Map<String, dynamic>;
+    final json = res['book'] as Map<String, dynamic>;
+    return BookDetailFetch(
+      book: EBook.fromJson(json),
+      unlocked: json['unlocked'] as bool? ?? false,
+    );
+  }
+
   /// A synthetic [ExamPack] so a book can travel through the shared payment
   /// flow (which keys everything on `id`, `title` and `priceBirr`).
   ExamPack purchasableForBook(EBook book) => ExamPack(
@@ -510,12 +724,102 @@ class AppState extends ChangeNotifier {
     _answered[packId] = (_answered[packId] ?? 0) + 1;
     if (wasCorrect) {
       _correct[packId] = (_correct[packId] ?? 0) + 1;
+      currentStreak++;
+      if (currentStreak > bestStreak) bestStreak = currentStreak;
+    } else {
+      currentStreak = 0;
     }
-    api?.put('/exam/packs/$packId/progress', {
-      'answered': _answered[packId],
-      'correct': _correct[packId] ?? 0,
-    }).catchError((Object e) => _syncFailed(e));
+    final client = api;
+    if (client != null) {
+      client.post('/exam/packs/$packId/record-answer', {
+        'wasCorrect': wasCorrect,
+        'packTitle': packById(packId)?.title ?? '',
+      }).catchError((Object e) {
+        _syncFailed(e);
+      });
+    }
     notifyListeners();
+  }
+
+  /// Fetches the dashboard's "This Week"/"Recent Activity" data. Only
+  /// meaningful when [isOnline] — offline there's no persisted history to
+  /// fetch (progress resets on restart same as everything else offline), so
+  /// callers should keep their own local/demo fallback for that case.
+  Future<DashboardActivity> fetchDashboardActivity() async {
+    final res = await api!.get('/exam/activity') as Map<String, dynamic>;
+    final week = (res['week'] as List)
+        .map((j) => WeeklyActivityDay(
+              weekday: (j as Map)['weekday'] as String,
+              count: j['count'] as int,
+            ))
+        .toList();
+    final recent = (res['recent'] as List)
+        .map((j) => ActivityEntry(
+              packTitle: (j as Map)['packTitle'] as String,
+              wasCorrect: j['wasCorrect'] as bool,
+              at: DateTime.parse(j['at'] as String),
+            ))
+        .toList();
+    return DashboardActivity(week: week, recent: recent);
+  }
+
+  /// Fetches the caller's real leaderboard position. Offline there's only
+  /// ever one (local, demo) learner, so this returns a trivial `1 of 1`
+  /// without a network call.
+  Future<RankFetch> fetchRank() async {
+    if (!isOnline) return const RankFetch(rank: 1, totalUsers: 1);
+    final res = await api!.get('/leaderboard/me') as Map<String, dynamic>;
+    return RankFetch(rank: res['rank'] as int, totalUsers: res['totalUsers'] as int);
+  }
+
+  // --- Admin: user management ("Users" page) ----------------------------
+
+  /// Every real account — the admin "Users" page. Only ever meaningful
+  /// online (there's only ever one local/demo user offline).
+  Future<List<AdminUserSummary>> fetchAllUsers() async {
+    final res = await api!.get('/users') as Map<String, dynamic>;
+    return (res['users'] as List)
+        .map((j) => AdminUserSummary.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// One user's real activity — what they've actually been doing, with
+  /// dates — for the admin "Users" detail page.
+  Future<AdminUserActivity> fetchUserActivity(String userId) async {
+    final res = await api!.get('/users/$userId/activity') as Map<String, dynamic>;
+    return AdminUserActivity(
+      user: AdminUserSummary.fromJson(res['user'] as Map<String, dynamic>),
+      week: (res['week'] as List)
+          .map((j) => WeeklyActivityDay(
+                weekday: (j as Map)['weekday'] as String,
+                count: j['count'] as int,
+              ))
+          .toList(),
+      recent: (res['recent'] as List)
+          .map((j) => ActivityEntry(
+                packTitle: (j as Map)['packTitle'] as String,
+                wasCorrect: j['wasCorrect'] as bool,
+                at: DateTime.parse(j['at'] as String),
+              ))
+          .toList(),
+    );
+  }
+
+  /// Directly grants or revokes one pack/book for one user — the admin
+  /// "open"/"close" access control, independent of any specific payment
+  /// request (that flow still works too; this corrects or overrides it, or
+  /// grants access outright). Returns the user's updated unlocked-pack list.
+  Future<List<String>> setUserAccess({
+    required String userId,
+    required String packId,
+    required bool unlock,
+  }) async {
+    final res = await api!.put('/users/$userId/access', {
+      'packId': packId,
+      'unlock': unlock,
+    }) as Map<String, dynamic>;
+    final user = res['user'] as Map<String, dynamic>;
+    return (user['unlockedPacks'] as List).cast<String>();
   }
 
   void unlock(String packId) {
@@ -543,6 +847,32 @@ class AppState extends ChangeNotifier {
     final pool = questionsForPack(pack.id);
     final list = pool.isEmpty ? questions : pool;
     return list[index % list.length];
+  }
+
+  /// Fetches a single exam question the way [ExamScreen] actually needs it:
+  /// gated server-side when online (a locked index never leaves the server
+  /// at all — see `GET /api/exam/packs/:id/questions/:index` and "The
+  /// paywall" in backend/README.md), or the existing fully-local logic when
+  /// offline. Bulk `questions` is never fetched for a non-admin online
+  /// session (see `_loadCatalog`), so this is the only source of question
+  /// content for a learner taking an exam online.
+  Future<ExamQuestionFetch> fetchExamQuestion({
+    required ExamPack pack,
+    required int index,
+  }) async {
+    if (!isOnline) {
+      final locked = questionLocked(pack, index);
+      return ExamQuestionFetch(
+        locked: locked,
+        question: locked ? null : examQuestion(pack, index),
+      );
+    }
+    final res = await api!.get('/exam/packs/${pack.id}/questions/$index') as Map<String, dynamic>;
+    final locked = res['locked'] as bool;
+    return ExamQuestionFetch(
+      locked: locked,
+      question: locked ? null : Question.fromJson(res['question'] as Map<String, dynamic>),
+    );
   }
 
   void addQuestion(Question q) {
@@ -654,6 +984,96 @@ class AppState extends ChangeNotifier {
     api?.put('/payments/$requestId/decide', {
       'status': decision == PaymentStatus.approved ? 'approved' : 'rejected',
     }).catchError((Object e) => _syncFailed(e));
+    notifyListeners();
+  }
+
+  // --- Q&A ("Ask a question" screen + admin management) -----------------
+
+  /// Asks a question from the current user. Shows up locally right away;
+  /// syncs in the background when online (and swaps the locally-generated
+  /// id for the server's real one, same as [submitPaymentRequest], so a
+  /// later admin answer — which targets the server id — can find it again).
+  void askQuestion(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+    final item = QaItem(
+      id: _newId('qa'),
+      askedByName: profile.name,
+      question: trimmed,
+      createdAt: DateTime.now(),
+    );
+    qaItems.insert(0, item);
+    final client = api;
+    if (client != null) {
+      client.post('/qa', {'question': trimmed}).then((res) {
+        final created =
+            QaItem.fromJson((res as Map)['question'] as Map<String, dynamic>);
+        final i = qaItems.indexWhere((q) => q.id == item.id);
+        if (i != -1) qaItems[i] = created;
+        notifyListeners();
+      }).catchError((Object e) {
+        _syncFailed(e);
+      });
+    }
+    notifyListeners();
+  }
+
+  /// Refetches the current user's own Q&A thread from the backend — call
+  /// when opening the Q&A screen online so it shows what's really there
+  /// (an answer given from another device/session, for instance), not just
+  /// whatever happened to already be in memory.
+  Future<void> fetchMyQuestions() async {
+    if (!isOnline) return;
+    final res = await api!.get('/qa/mine') as Map<String, dynamic>;
+    qaItems = (res['questions'] as List)
+        .map((j) => QaItem.fromJson(j as Map<String, dynamic>))
+        .toList();
+    notifyListeners();
+  }
+
+  /// Admin: every question from every learner. Online-only — offline there's
+  /// only ever this one demo learner, so the admin Q&A screen falls back to
+  /// [qaItems] directly rather than calling this.
+  Future<List<QaItem>> fetchAllQuestions() async {
+    final res = await api!.get('/qa') as Map<String, dynamic>;
+    return (res['questions'] as List)
+        .map((j) => QaItem.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Admin: answers (or edits a previous answer to) a question. Updates the
+  /// local copy if it happens to be in [qaItems] (the offline/self-answer
+  /// case); the admin Q&A screen otherwise manages its own fetched list and
+  /// applies the returned item itself.
+  Future<QaItem> answerQuestion({required String id, required String answer}) async {
+    final trimmed = answer.trim();
+    if (trimmed.isEmpty) {
+      throw ApiException('An answer is required.');
+    }
+    QaItem updated;
+    if (isOnline) {
+      final res =
+          await api!.put('/qa/$id/answer', {'answer': trimmed}) as Map<String, dynamic>;
+      updated = QaItem.fromJson(res['question'] as Map<String, dynamic>);
+    } else {
+      final i = qaItems.indexWhere((q) => q.id == id);
+      if (i == -1) throw ApiException('Question not found.');
+      qaItems[i]
+        ..answer = trimmed
+        ..status = QaStatus.answered
+        ..answeredAt = DateTime.now();
+      updated = qaItems[i];
+    }
+    final i = qaItems.indexWhere((q) => q.id == id);
+    if (i != -1) qaItems[i] = updated;
+    notifyListeners();
+    return updated;
+  }
+
+  /// Admin: removes a question (spam, duplicate, etc.).
+  void deleteQuestionThread(String id) {
+    qaItems.removeWhere((q) => q.id == id);
+    api?.delete('/qa/$id').catchError((Object e) => _syncFailed(e));
     notifyListeners();
   }
 

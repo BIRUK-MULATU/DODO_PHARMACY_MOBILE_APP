@@ -38,6 +38,7 @@ class AppDrawer extends StatelessWidget {
       _DrawerItem(Icons.home_rounded, 'Home', AppRoutes.track),
       _DrawerItem(Icons.dashboard_rounded, 'Dashboard', AppRoutes.dashboard),
       _DrawerItem(Icons.menu_book_rounded, 'E-Book', AppRoutes.ebook),
+      _DrawerItem(Icons.forum_rounded, 'Q&A', AppRoutes.qa),
       if (state.isAdmin)
         _DrawerItem(
             Icons.admin_panel_settings_rounded, 'Admin panel', AppRoutes.admin),

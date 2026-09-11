@@ -11,11 +11,32 @@ router.get('/', async (_req, res) => {
 });
 
 router.put('/', requireAuth, requireAdmin, async (req, res) => {
-  const { version, intro, features, unlocking, supportEmail, supportTelegram, supportPhone, footer } =
-    req.body ?? {};
+  const {
+    version,
+    intro,
+    features,
+    unlocking,
+    supportEmail,
+    supportTelegram,
+    supportPhone,
+    footer,
+    marqueeText,
+    onboardingSubtitle,
+  } = req.body ?? {};
   const about = await AboutInfo.findByIdAndUpdate(
     'singleton',
-    { version, intro, features, unlocking, supportEmail, supportTelegram, supportPhone, footer },
+    {
+      version,
+      intro,
+      features,
+      unlocking,
+      supportEmail,
+      supportTelegram,
+      supportPhone,
+      footer,
+      marqueeText,
+      onboardingSubtitle,
+    },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   res.json({ about: about.toJSON() });

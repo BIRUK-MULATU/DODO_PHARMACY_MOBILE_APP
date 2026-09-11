@@ -13,21 +13,99 @@ import '../widgets/wave.dart';
 /// are locked behind a one-time payment. Unlocks live via [AppState] the moment
 /// an admin approves the receipt. A book is either an uploaded PDF or typed
 /// pages.
-class EBookReaderScreen extends StatelessWidget {
+///
+/// Offline this reads straight from [AppState.bookById] — unchanged from
+/// before there was a backend. Online, the catalog's bulk book list only
+/// ever carries metadata (see `AppState._loadCatalog`), so this fetches the
+/// real, gated content once via [AppState.fetchBookDetail] instead.
+class EBookReaderScreen extends StatefulWidget {
   const EBookReaderScreen({super.key, required this.book});
 
   final EBook book;
 
   @override
+  State<EBookReaderScreen> createState() => _EBookReaderScreenState();
+}
+
+class _EBookReaderScreenState extends State<EBookReaderScreen> {
+  EBook? _fetched;
+  bool _fetchedUnlocked = false;
+  bool _loading = false;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (AppStateScope.read(context).isOnline) _fetch();
+  }
+
+  Future<void> _fetch() async {
+    setState(() {
+      _loading = true;
+      _failed = false;
+    });
+    try {
+      final result = await AppStateScope.read(context).fetchBookDetail(widget.book.id);
+      if (!mounted) return;
+      setState(() {
+        _fetched = result.book;
+        _fetchedUnlocked = result.unlocked;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _failed = true;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
-    final live = state.bookById(book.id) ?? book;
-    final unlocked = state.isUnlocked(live.id);
+    final online = state.isOnline;
 
-    void openPayment() => Navigator.of(context).pushNamed(
-          AppRoutes.payMethod,
-          arguments: state.purchasableForBook(live),
-        );
+    final EBook live;
+    final bool unlocked;
+    if (online) {
+      live = _fetched ?? widget.book;
+      unlocked = _fetched != null ? _fetchedUnlocked : state.isUnlocked(widget.book.id);
+    } else {
+      live = state.bookById(widget.book.id) ?? widget.book;
+      unlocked = state.isUnlocked(live.id);
+    }
+
+    void openPayment() => Navigator.of(context)
+        .pushNamed(AppRoutes.payMethod, arguments: state.purchasableForBook(live))
+        .then((_) {
+      // Coming back from a successful payment — reload so the newly
+      // unlocked pages/PDF actually show up.
+      if (online && mounted) _fetch();
+    });
+
+    Widget body;
+    if (online && _loading && _fetched == null) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (online && _failed && _fetched == null) {
+      body = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Couldn't load this book.", textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              TextButton(onPressed: _fetch, child: const Text('Try again')),
+            ],
+          ),
+        ),
+      );
+    } else {
+      body = live.hasPdf
+          ? _PdfBody(book: live, unlocked: unlocked, onUnlock: openPayment)
+          : _TextBody(book: live, unlocked: unlocked, onUnlock: openPayment);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.yellow,
@@ -38,13 +116,7 @@ class EBookReaderScreen extends StatelessWidget {
             title: live.title,
             onBack: () => Navigator.of(context).maybePop(),
           ),
-          Expanded(
-            child: live.hasPdf
-                ? _PdfBody(
-                    book: live, unlocked: unlocked, onUnlock: openPayment)
-                : _TextBody(
-                    book: live, unlocked: unlocked, onUnlock: openPayment),
-          ),
+          Expanded(child: body),
         ],
       ),
     );

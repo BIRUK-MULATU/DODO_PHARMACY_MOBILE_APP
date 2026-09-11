@@ -11,26 +11,34 @@ function withMeta(book) {
   return { ...book.toJSON(), pageCount: book.pages.length, hasPdf: Boolean(book.pdfData) };
 }
 
-// Full content for every book, same trust model the client always had (the
-// in-memory `MockData` version held every page for every book regardless of
-// payment status — the free/paid split was, and still is, enforced by the
-// reader UI/`AppState`, not by withholding content). `GET /:id` below is a
-// stricter, gate-on-the-server alternative that isn't wired into the app
-// yet — see backend/README.md.
-router.get('/', async (_req, res) => {
+// Metadata only (title/cover/price/subjects/pageCount/hasPdf) — never the
+// pages or the PDF. The catalog list only ever needs this; an admin gets
+// full content too (they need it to prefill the edit form), since they can
+// already read/write every book through the CRUD routes below anyway.
+router.get('/', requireAuth, async (req, res) => {
   const books = await EBook.find().sort({ createdAt: 1 });
-  res.json({ books: books.map(withMeta) });
+  const isAdmin = req.user.role === 'admin';
+  res.json({
+    books: books.map((b) => {
+      const json = withMeta(b);
+      if (!isAdmin) {
+        json.pages = [];
+        json.pdfData = null;
+      }
+      return json;
+    }),
+  });
 });
 
-// Stricter alternative to the list above: only ever reveals pages/PDF up to
-// the free window unless the caller has actually unlocked the book. Not
-// called by the app today — a future hardening pass could switch the reader
-// to fetch through this instead of trusting the bulk list.
+// Full content for one book, gated by whether the caller has unlocked it —
+// pages/PDF beyond the free window are simply absent from the response
+// otherwise. Admins always get full content (editing a book they haven't
+// personally "purchased" is still a normal admin action).
 router.get('/:id', requireAuth, async (req, res) => {
   const book = await EBook.findById(req.params.id);
   if (!book) return res.status(404).json({ error: 'Book not found.' });
 
-  const unlocked = req.user.unlockedPacks.includes(book.id);
+  const unlocked = req.user.unlockedPacks.includes(book.id) || req.user.role === 'admin';
   const json = withMeta(book);
   if (!unlocked) {
     json.pdfData = null;

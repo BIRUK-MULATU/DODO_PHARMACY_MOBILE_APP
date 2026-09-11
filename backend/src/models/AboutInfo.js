@@ -13,6 +13,12 @@ const aboutInfoSchema = new mongoose.Schema(
     supportTelegram: { type: String, default: '' },
     supportPhone: { type: String, default: '' },
     footer: { type: String, default: '' },
+
+    // The promo strip looping under the header on Home/Dashboard/Track
+    // select/E-book (was hardcoded in MarqueeTicker's default text).
+    marqueeText: { type: String, default: '' },
+    // The subtitle under "WELCOME TO" on the onboarding screen.
+    onboardingSubtitle: { type: String, default: '' },
   },
   { _id: false, timestamps: true },
 );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/app_state.dart';
 import '../data/mock_data.dart';
 import '../data/models.dart';
 import '../screens/about_app_screen.dart';
@@ -17,17 +18,23 @@ import '../screens/payment/payment_pending_screen.dart';
 import '../screens/payment/payment_prompt_screen.dart';
 import '../screens/payment/payment_success_screen.dart';
 import '../screens/payment/upload_receipt_screen.dart';
+import '../screens/qa_screen.dart';
 import '../screens/admin/admin_about_screen.dart';
 import '../screens/admin/admin_book_form_screen.dart';
 import '../screens/admin/admin_books_screen.dart';
 import '../screens/admin/admin_home_screen.dart';
 import '../screens/admin/admin_pack_form_screen.dart';
+import '../screens/admin/admin_bank_form_screen.dart';
+import '../screens/admin/admin_banks_screen.dart';
 import '../screens/admin/admin_packs_screen.dart';
 import '../screens/admin/admin_payments_screen.dart';
 import '../screens/admin/admin_question_form_screen.dart';
 import '../screens/admin/admin_questions_screen.dart';
 import '../screens/admin/admin_track_form_screen.dart';
 import '../screens/admin/admin_tracks_screen.dart';
+import '../screens/admin/admin_qa_screen.dart';
+import '../screens/admin/admin_user_detail_screen.dart';
+import '../screens/admin/admin_users_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/results_screen.dart';
 import '../screens/signup_screen.dart';
@@ -48,6 +55,7 @@ class AppRoutes {
   static const ebookReader = '/ebook/reader';
   static const about = '/about';
   static const aboutApp = '/about-app';
+  static const qa = '/qa';
   static const exam = '/exam';
   static const results = '/results';
   static const dashboard = '/dashboard';
@@ -68,6 +76,11 @@ class AppRoutes {
   static const adminTracks = '/admin/tracks';
   static const adminTrackForm = '/admin/tracks/form';
   static const adminAbout = '/admin/about';
+  static const adminBanks = '/admin/banks';
+  static const adminBankForm = '/admin/banks/form';
+  static const adminUsers = '/admin/users';
+  static const adminUserDetail = '/admin/users/detail';
+  static const adminQa = '/admin/qa';
 
   /// Switch between top-level sections (Home / Dashboard / E-Book / Profile)
   /// without stacking them: unwind to the app root, then push once.
@@ -125,6 +138,9 @@ class AppRoutes {
       case aboutApp:
         page = const AboutAppScreen();
         break;
+      case qa:
+        page = const QaScreen();
+        break;
       case exam:
         page = ExamScreen(pack: pack);
         break;
@@ -145,7 +161,7 @@ class AppRoutes {
         page = UploadReceiptScreen(
           args: args is UploadReceiptArgs
               ? args
-              : UploadReceiptArgs(pack: pack, bank: MockData.banks.first),
+              : UploadReceiptArgs(pack: pack, bank: MockData.seedBanks().first),
         );
         break;
       case payPending:
@@ -187,6 +203,25 @@ class AppRoutes {
         break;
       case adminAbout:
         page = const AdminAboutScreen();
+        break;
+      case adminBanks:
+        page = const AdminBanksScreen();
+        break;
+      case adminBankForm:
+        page = AdminBankFormScreen(bank: args is BankAccount ? args : null);
+        break;
+      case adminUsers:
+        page = const AdminUsersScreen();
+        break;
+      case adminUserDetail:
+        if (args is! AdminUserSummary) {
+          page = const AdminUsersScreen();
+          break;
+        }
+        page = AdminUserDetailScreen(user: args);
+        break;
+      case adminQa:
+        page = const AdminQaScreen();
         break;
       default:
         page = const SplashScreen();

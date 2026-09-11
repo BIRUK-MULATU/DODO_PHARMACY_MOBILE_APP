@@ -29,14 +29,75 @@ class _ExamScreenState extends State<ExamScreen> {
   final Set<int> _answeredSet = {};
   final Set<int> _correctSet = {};
 
+  /// Online-mode cache: once an index resolves (loaded or locked), it stays
+  /// that way for the rest of this screen's lifetime — see [_slotFor].
+  final Map<int, Question> _loadedCache = {};
+  final Set<int> _lockedCache = {};
+  final Set<int> _inFlight = {};
+
   ExamPack get pack => widget.pack;
-  Question get q => AppStateScope.read(context).examQuestion(pack, _index);
   bool get answered => _answeredSet.contains(_index);
   int? get selected => _selected[_index];
 
+  @override
+  void initState() {
+    super.initState();
+    _ensureLoaded(_index);
+  }
+
+  /// Resolves what to show for [index] right now. Offline this is always
+  /// synchronous (unchanged from before there was a backend); online it
+  /// reflects whatever [_ensureLoaded] has fetched from the server so far —
+  /// a locked index never carries question content at all.
+  _QuestionSlot _slotFor(int index) {
+    final state = AppStateScope.read(context);
+    if (!state.isOnline) {
+      final locked = state.questionLocked(pack, index) && !_answeredSet.contains(index);
+      return locked
+          ? const _QuestionSlot.locked()
+          : _QuestionSlot.loaded(state.examQuestion(pack, index));
+    }
+    final cached = _loadedCache[index];
+    if (cached != null) return _QuestionSlot.loaded(cached);
+    if (_lockedCache.contains(index)) return const _QuestionSlot.locked();
+    return const _QuestionSlot.loading();
+  }
+
+  /// Kicks off (and caches) a fetch for [index] when online. No-op offline
+  /// (nothing to prefetch — [_slotFor] resolves it synchronously) and no-op
+  /// if [index] is already resolved or already in flight.
+  void _ensureLoaded(int index) {
+    final state = AppStateScope.read(context);
+    if (!state.isOnline) return;
+    if (_loadedCache.containsKey(index) ||
+        _lockedCache.contains(index) ||
+        _inFlight.contains(index)) {
+      return;
+    }
+    _inFlight.add(index);
+    state.fetchExamQuestion(pack: pack, index: index).then((result) {
+      if (!mounted) return;
+      setState(() {
+        _inFlight.remove(index);
+        if (result.locked) {
+          _lockedCache.add(index);
+        } else {
+          _loadedCache[index] = result.question!;
+        }
+      });
+    }).catchError((Object _) {
+      if (!mounted) return;
+      // Leave it unresolved — the loading spinner stays and a later retry
+      // (e.g. revisiting this index) will try again.
+      setState(() => _inFlight.remove(index));
+    });
+  }
+
   void _choose(int option) {
     if (answered) return;
-    final wasCorrect = option == q.correctIndex;
+    final question = _slotFor(_index).question;
+    if (question == null) return; // shouldn't happen — options aren't shown until loaded
+    final wasCorrect = option == question.correctIndex;
     setState(() {
       _selected[_index] = option;
       _answeredSet.add(_index);
@@ -55,6 +116,7 @@ class _ExamScreenState extends State<ExamScreen> {
       _forward = delta > 0;
       _index = next;
     });
+    _ensureLoaded(_index);
   }
 
   void _openPayment() {
@@ -71,6 +133,7 @@ class _ExamScreenState extends State<ExamScreen> {
       _forward = clamped > _index;
       _index = clamped;
     });
+    _ensureLoaded(_index);
   }
 
   void _finish() {
@@ -88,14 +151,16 @@ class _ExamScreenState extends State<ExamScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = AppStateScope.of(context);
+    AppStateScope.of(context); // subscribe — pack/unlock state can change under us
     final topPad = MediaQuery.of(context).padding.top;
     final progress = (_index + (answered ? 1 : 0)) / pack.questionCount;
     final counter =
         '${(_index + 1).toString().padLeft(4, '0')}/${pack.questionCount}';
 
-    // Past the free window (or free answers used up) and not yet answered.
-    final locked = state.questionLocked(pack, _index) && !answered;
+    final slot = _slotFor(_index);
+    final locked = slot.locked;
+    final loading = slot.loading;
+    final q = slot.question; // non-null exactly when !locked && !loading
 
     return Scaffold(
       backgroundColor: AppColors.yellow,
@@ -177,16 +242,16 @@ class _ExamScreenState extends State<ExamScreen> {
                                   Border.all(color: AppColors.ink, width: 1.5),
                             ),
                             child: Text(
-                              locked
-                                  ? 'Question ${_index + 1} of ${pack.questionCount}'
-                                  : 'Question ${q.number} of ${q.total}',
+                              q != null
+                                  ? 'Question ${q.number} of ${q.total}'
+                                  : 'Question ${_index + 1} of ${pack.questionCount}',
                               style: const TextStyle(
                                   fontWeight: FontWeight.w800, fontSize: 13),
                             ),
                           ),
                         ),
                         const SizedBox(width: 10),
-                        if (answered)
+                        if (answered && q != null)
                           _ResultBadge(correct: selected == q.correctIndex)
                         else if (locked)
                           const _LockChip(),
@@ -194,17 +259,18 @@ class _ExamScreenState extends State<ExamScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      locked
-                          ? 'Question ${_index + 1} is part of the full set. '
-                              'Unlock it to see the question and its answer.'
-                          : q.prompt,
+                      q?.prompt ??
+                          (locked
+                              ? 'Question ${_index + 1} is part of the full set. '
+                                  'Unlock it to see the question and its answer.'
+                              : 'Loading…'),
                       style: TextStyle(
                         fontSize: 16,
                         height: 1.5,
                         fontWeight: FontWeight.w500,
-                        color: locked
-                            ? AppColors.ink.withValues(alpha: 0.6)
-                            : AppColors.ink,
+                        color: q != null
+                            ? AppColors.ink
+                            : AppColors.ink.withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -214,12 +280,17 @@ class _ExamScreenState extends State<ExamScreen> {
                         freeUsed: pack.freeLimit,
                         onPay: _openPayment,
                       )
+                    else if (loading || q == null)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
                     else ...[
                       for (var i = 0; i < q.options.length; i++)
                         _OptionTile(
                           letter: String.fromCharCode(65 + i),
                           text: q.options[i],
-                          state: _tileState(i),
+                          state: _tileState(i, q),
                           onTap: () => _choose(i),
                         ),
                       if (answered) ...[
@@ -283,7 +354,7 @@ class _ExamScreenState extends State<ExamScreen> {
     );
   }
 
-  _TileState _tileState(int i) {
+  _TileState _tileState(int i, Question q) {
     if (!answered) return _TileState.idle;
     if (i == q.correctIndex) return _TileState.correct;
     if (i == selected) return _TileState.wrong;
@@ -305,6 +376,26 @@ class _ExamScreenState extends State<ExamScreen> {
 }
 
 enum _TileState { idle, correct, wrong, dimmed }
+
+/// What [_ExamScreenState._slotFor] resolved for one question index. Exactly
+/// one of the three states holds; `question` is non-null only in `.loaded`.
+class _QuestionSlot {
+  const _QuestionSlot.loading()
+      : loading = true,
+        locked = false,
+        question = null;
+  const _QuestionSlot.locked()
+      : loading = false,
+        locked = true,
+        question = null;
+  const _QuestionSlot.loaded(this.question)
+      : loading = false,
+        locked = false;
+
+  final bool loading;
+  final bool locked;
+  final Question? question;
+}
 
 class _ResultBadge extends StatelessWidget {
   const _ResultBadge({required this.correct});

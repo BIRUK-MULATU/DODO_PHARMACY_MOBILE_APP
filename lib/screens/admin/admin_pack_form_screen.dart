@@ -23,6 +23,9 @@ class _AdminPackFormScreenState extends State<AdminPackFormScreen> {
   late final TextEditingController _count;
   late final TextEditingController _price;
   late final TextEditingController _free;
+  late final TextEditingController _aboutSummary;
+  late final TextEditingController _aboutBullets;
+  late final TextEditingController _coreCourses;
   late String _trackId;
   late String _image;
 
@@ -40,6 +43,11 @@ class _AdminPackFormScreenState extends State<AdminPackFormScreen> {
     _trackId = p?.trackId ??
         (tracks.isNotEmpty ? tracks.first.id : '');
     _image = p?.image ?? MockData.packImages.first;
+    _aboutSummary = TextEditingController(text: p?.aboutSummary ?? '');
+    _aboutBullets =
+        TextEditingController(text: p?.aboutBullets.join('\n') ?? '');
+    _coreCourses =
+        TextEditingController(text: p?.coreCourses.join('\n') ?? '');
   }
 
   @override
@@ -48,8 +56,17 @@ class _AdminPackFormScreenState extends State<AdminPackFormScreen> {
     _count.dispose();
     _price.dispose();
     _free.dispose();
+    _aboutSummary.dispose();
+    _aboutBullets.dispose();
+    _coreCourses.dispose();
     super.dispose();
   }
+
+  List<String> _lines(String text) => text
+      .split('\n')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
@@ -57,6 +74,9 @@ class _AdminPackFormScreenState extends State<AdminPackFormScreen> {
     final count = int.tryParse(_count.text) ?? 0;
     final price = int.tryParse(_price.text) ?? 0;
     final free = int.tryParse(_free.text) ?? 0;
+    final aboutSummary = _aboutSummary.text.trim();
+    final aboutBullets = _lines(_aboutBullets.text);
+    final coreCourses = _lines(_coreCourses.text);
 
     if (_isEdit) {
       state.updatePack(widget.pack!.copyWith(
@@ -66,6 +86,9 @@ class _AdminPackFormScreenState extends State<AdminPackFormScreen> {
         questionCount: count,
         priceBirr: price,
         freeLimit: free,
+        aboutSummary: aboutSummary,
+        aboutBullets: aboutBullets,
+        coreCourses: coreCourses,
       ));
     } else {
       state.addPack(ExamPack(
@@ -76,6 +99,9 @@ class _AdminPackFormScreenState extends State<AdminPackFormScreen> {
         questionCount: count,
         priceBirr: price,
         freeLimit: free,
+        aboutSummary: aboutSummary,
+        aboutBullets: aboutBullets,
+        coreCourses: coreCourses,
       ));
     }
     Navigator.of(context).pop();
@@ -165,6 +191,41 @@ class _AdminPackFormScreenState extends State<AdminPackFormScreen> {
               onSelected: (v) => setState(() => _image = v),
             ),
             const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This pack\'s own "About Questions" screen — shown to '
+                      'the learner before they start the exam.',
+                      style: TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            _label('Summary line (leave blank for a sensible default)'),
+            _field(_aboutSummary,
+                hint: 'e.g. Ultimate Pharmacy Exit Exam Master Question '
+                    'Bank (3000+ MCQs & Detailed Explanations)',
+                maxLines: 2),
+            const SizedBox(height: 16),
+            _label('Bullet points — one per line'),
+            _field(_aboutBullets, maxLines: 6),
+            const SizedBox(height: 16),
+            _label('"Core Courses Covered" — one per line, leave blank to '
+                'hide that section'),
+            _field(_coreCourses, maxLines: 6),
+            const SizedBox(height: 24),
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.ink,
@@ -203,11 +264,13 @@ class _AdminPackFormScreenState extends State<AdminPackFormScreen> {
     String? hint,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    int maxLines = 1,
   }) {
     return TextFormField(
       controller: c,
       keyboardType: keyboardType,
       validator: validator,
+      maxLines: maxLines,
       decoration: InputDecoration(
         hintText: hint,
         filled: true,

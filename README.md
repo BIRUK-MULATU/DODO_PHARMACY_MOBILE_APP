@@ -56,7 +56,7 @@ where the plugin channel is unavailable (tests).
 flutter pub get
 flutter run                 # device / emulator
 flutter run -d chrome       # web
-flutter test                # 140 widget + unit tests (every screen, responsive sweep, admin CRUD, flows, backend sync)
+flutter test                # 193 widget + unit tests (every screen, responsive sweep, admin CRUD, flows, backend sync)
 flutter analyze             # clean, no issues
 ```
 
@@ -74,6 +74,34 @@ then sign up or log in from the app as normal (seeded accounts:
 `admin…` email is an admin). See "Backend" below for what that switch
 actually changes.
 
+**Running on a physical phone via USB** (`flutter run` targeting a real
+device, not an emulator): `10.0.2.2` — the app's default backend address on
+Android — is a special loopback that **only exists inside an emulator**; on
+a real phone it resolves to nothing, so login/signup just silently fail
+with no useful error. Fix: tunnel the phone's `localhost:4000` back to this
+machine over the same USB cable, then override the base URL to use it:
+
+```bash
+adb reverse tcp:4000 tcp:4000
+flutter run --dart-define=API_BASE_URL=http://localhost:4000/api
+```
+
+(Re-run `adb reverse` any time the phone is unplugged and replugged — the
+tunnel doesn't survive a USB disconnect.) The backend (`npm start` above)
+and a local MongoDB (`systemctl status mongod`) both need to already be
+running on this machine first.
+
+**Building a release APK to hand out directly (not through the Play
+Store)**: point it at a real, reachable backend with
+`flutter build apk --release --dart-define=API_BASE_URL=https://your-backend-domain/api`
+— the default base URL only ever resolves to `localhost`/`10.0.2.2`, which
+nothing outside this machine can reach. `android/app/src/main/AndroidManifest.xml`
+now declares the `INTERNET` permission (it used to only be granted to
+debug/profile builds via Flutter's default template — a release build built
+before this fix couldn't reach the network at all, silently). The backend
+itself also needs real, public HTTPS hosting first — see backend/README.md's
+"Not production-ready as-is" for what that still requires.
+
 ## Screen flow
 
 ```
@@ -87,9 +115,11 @@ splash → onboarding → login / signup → track select ─┬─► home ─�
 exam (free limit reached) → pay prompt → payment method → upload receipt → pending
                                                        (waits for admin approval → payment success)
 
-login with an "admin…" email → admin panel → { tracks · packs · e-books · questions · payment approvals } — all CRUD
+login with an "admin…" email → admin panel → { tracks · packs · e-books · questions · payment approvals · users · Q&A } — all CRUD
 
 e-book collection → open a book → read 4 pages free → lock → pay → (admin approves) → all pages unlock
+
+side drawer → Q&A → ask a question → admin panel → Q&A → answer it → shows back up for the learner
 ```
 
 `onGenerateRoute` in `lib/app/routes.dart` is the single source of navigation;
@@ -102,8 +132,8 @@ Sign in with any email that starts with **`admin`** (e.g. `admin@dodomed.com`) �
 `AppState.isAdmin` is set and login routes to `/admin` instead of the app.
 
 Everything the learner sees is admin-editable, held in memory on `AppState`
-(`tracks`, `examPacks`, `books`, `questions`, `aboutInfo`) and seeded from
-`MockData.seed*()`:
+(`tracks`, `examPacks`, `books`, `questions`, `aboutInfo`, `banks`) and
+seeded from `MockData.seed*()`:
 
 - **Tracks** — full CRUD over the fields of study on the "what would you like to
   learn" screen (Pharmacy, Nursing, and any more — Midwifery, Lab, …). Each track
@@ -111,10 +141,14 @@ Everything the learner sees is admin-editable, held in memory on `AppState`
   and their questions (with a confirmation).
 - **Exam packs** — full CRUD. A pack has a title (e.g. *3000 Exit Question Sample
   Exam*, *2800 COC Sample Question Exam*), a track, a question-bank size, a price,
-  a free-question limit and a cover image (a bundled preset **or an upload from
-  the device** — see *Admin image uploads*). Deleting a pack cascades to its
-  questions. The Home screen shows the packs for the track the learner picked
-  (`AppState.visiblePacks`).
+  a free-question limit, a cover image (a bundled preset **or an upload from
+  the device** — see *Admin image uploads*), and **its own "About Questions"
+  content** (`aboutSummary`/`aboutBullets`/`coreCourses` — the summary line,
+  bullet points, and "Core Courses Covered" list shown on `AboutQuestionsScreen`
+  before the learner starts that pack; each pack has its own, not shared —
+  used to be one global list for every pack, with no way to tell packs apart).
+  Deleting a pack cascades to its questions. The Home screen shows the packs
+  for the track the learner picked (`AppState.visiblePacks`).
 - **E-books** — full CRUD over `AppState.books`. A book has a title, price,
   cover, subjects, a **free-page count**, and its content is **either an uploaded
   PDF** (`Upload PDF from device` in the form → saved to app storage via
@@ -136,14 +170,52 @@ Everything the learner sees is admin-editable, held in memory on `AppState`
   again" state).
 - **About page** — edits `AppState.aboutInfo` (an `AboutInfo`): version, intro,
   the "What you get" bullets (one per line), the "how unlocking works"
-  paragraph, support email / Telegram / phone, and the footer. `AboutAppScreen`
-  (the drawer "About") renders live from it and hides any section left empty.
-  **Reset** restores `MockData.seedAboutInfo()`.
+  paragraph, support email / Telegram / phone, and the footer — plus two
+  fields that used to be hardcoded with **no** admin control at all: the
+  promo strip text (loops under the header on Home/Dashboard/Track select/
+  E-book) and the onboarding subtitle (under "WELCOME TO"). (The "About
+  Questions" bullets/core-courses used to live here too as one shared list —
+  they're per-pack now, edited on each pack's own form instead; see "Exam
+  packs" above.) `AboutAppScreen` (the drawer "About") renders live from it
+  and hides any section left empty. **Reset** restores
+  `MockData.seedAboutInfo()`.
+- **Bank accounts** — full CRUD over `AppState.banks`, the accounts shown on
+  the payment-method screen telling users where to transfer money. Also used
+  to be hardcoded with no admin control — a real gap, since it's the one
+  piece of content directly tied to real money. The admin picks the code
+  (e.g. `CBE`) themselves; deleting the last one disables checkout instead
+  of crashing.
+- **Users** — every real account (`AdminUsersScreen`, online-only — there's
+  only ever one local/demo user offline), each showing when they joined and
+  how much they've answered. Tap one for `AdminUserDetailScreen`: profile,
+  stats (answered/correct/best streak), a dated **Recent Activity** log (what
+  they answered and when — not just a running total), and an **Access**
+  section listing every exam pack and e-book with an Open/Closed switch the
+  admin can flip directly (`AppState.setUserAccess` → `PUT
+  /api/users/:id/access`). This is separate from, and overrides, the
+  payment-approval flow above — admin can grant or revoke access outright
+  without a receipt on file, or correct a mistake. Each book row also has a
+  **preview** button that opens `EBookReaderScreen` so admin can read the
+  actual book the user purchased, the same page the user gets.
+- **Q&A** (`AdminQaScreen`) — every question asked from the app's side-drawer
+  Q&A screen, pending ones first, each with an inline composer to answer (or
+  edit a previous answer) and a delete button for spam/duplicates. Answering
+  shows up back on the learner's own Q&A screen as a clearly-branded
+  "DODOMED Support ✓" card with the answer and the date — not a raw text
+  dump. Offline (only ever one demo learner) falls back to that learner's
+  own thread, so the feature is still fully exercisable without a backend.
 
-Covered by `test/admin_test.dart` (question/pack/track CRUD + screens),
+Covered by `test/admin_test.dart` (question/pack/track/bank CRUD + screens),
 `test/ebook_test.dart` (book CRUD incl. PDF, the free-page gate, admin book
 form), `test/image_upload_test.dart` (uploaded covers/figures),
-`test/about_admin_test.dart` (About-page editing) and
+`test/about_admin_test.dart` (About-page editing),
+`test/admin_content_control_test.dart` (every admin-edited content field
+actually showing up where the user sees it — the promo strip, onboarding
+subtitle, About Questions bullets, and bank accounts),
+`test/admin_users_test.dart` (the Users list + detail screens, and
+`AppState.fetchAllUsers`/`fetchUserActivity`/`setUserAccess` against a fake
+backend), `test/qa_test.dart` (asking, answering, deleting — both screens
+and the underlying `AppState` methods, online and offline) and
 `test/payment_flow_test.dart`.
 
 ### Profile (edit on-device)
@@ -183,6 +255,62 @@ flow, end to end — both use `test/support/fake_file_selector.dart` to fake the
 OS file dialog). In an online session, the receipt and the approval both sync
 to the backend too (see "Backend" below).
 
+### Results screen (`results_screen.dart`)
+
+Shows the *real* correct/answered counts and accuracy from the exam just
+finished (`ResultsArgs.correct`/`.answered`, both genuine — `exam_screen.dart`
+tracks them per-question as the learner answers). It used to instead show a
+fabricated number: the sample score scaled up to the size of the whole
+question bank (e.g. 4/5 correct in a 3000-question pack displayed as
+"2400 / 3000", as if the full bank had been answered). Now it's
+`{correct} / {answered} correct` plus an accuracy badge, and a real **grade**
+(`_Grade.forAccuracy` in `results_screen.dart`) with a message that actually
+matches the result instead of one generic "Well done!" every time:
+
+| Accuracy | Grade | Message |
+|---|---|---|
+| ≥ 90% | Excellent! | "You deserve it! 🏆" |
+| ≥ 75% | Very Good! | "Great performance — keep it up!" |
+| ≥ 50% | Good | "Solid effort — keep practising to get even better." |
+| < 50% | Needs Improvement | "Don't worry — improve it! Review the explanations and try again." |
+
+The confetti burst only plays at 50%+ too — celebrating a score that needs
+improvement felt dishonest. Covered by `test/results_screen_test.dart` (one
+case per tier, plus the anti-fabrication check above).
+
+### Dashboard (`dashboard_screen.dart`)
+
+Every stat and chart is backed by real data, not a fixed demo value:
+Answered/Accuracy/the progress hero/the readiness gauge were always real;
+**Best Streak**, **Rank**, **This Week**, and **Recent Activity** were
+hardcoded or mislabeled until this pass (Best Streak used to just show total
+correct answers; Rank was a literal `12` that never changed; This Week and
+Recent Activity never reflected anything the learner actually did). Now:
+
+- **Best Streak** is a real current/longest run of consecutive correct
+  answers, tracked in `AppState.recordAnswer` — works offline too, not just
+  online, since it's just local arithmetic.
+- **Rank** and the new **Leaderboard** panel (rank badge + position bar) come
+  from `AppState.fetchRank` — a genuine cross-account leaderboard when
+  online (`GET /api/leaderboard/me`), a trivial `1 of 1` offline.
+- **This Week** and **Recent Activity** come from `AppState.
+  fetchDashboardActivity` (`GET /api/exam/activity`) when online; offline
+  (no persisted history to fetch) they fall back to a small sample so the
+  panel isn't empty.
+- New **Pack Progress** panel — a progress bar per exam pack, not just the
+  primary one shown in the hero card, using data already on `AppState` (no
+  backend call).
+- The exam-readiness gauge's `CustomPainter` had a real bug fixed in the
+  same pass: its radius came from the panel's full *width* while the box was
+  only 130px tall, so the arc painted outside its own box. The radius is now
+  derived from both dimensions and can't exceed its container. The "This
+  Week" bars now scale to the available width instead of a fixed pixel size.
+
+Covered by `test/dashboard_online_test.dart` (the real online panels,
+end to end through the actual screen) plus new cases in
+`test/backend_integration_test.dart` for the streak/activity/rank data
+itself.
+
 ## Backend
 
 `backend/` is a small Express + MongoDB API (see `backend/README.md` for
@@ -205,26 +333,43 @@ screen and test exercises. `authLogin`/`authSignUp` (real calls from
   saved (`shared_preferences`) from a previous session and the server still
   accepts it, the session resumes silently before deciding whether to land
   on onboarding or home.
-- The free-question/free-page paywall is still enforced the same way it
-  always was — client-side, by what `AppState`/the reader UI choose to
-  render (see the section above) — because the bulk `GET /api/questions` and
-  `GET /api/books` endpoints hand back full content to any logged-in user,
-  same as the old in-memory `MockData` did. Two stricter, per-item endpoints
-  (`/api/exam/...`, `GET /api/books/:id`) exist and are verified working via
-  curl, but aren't wired into the app yet — see backend/README.md's "The
-  paywall" section for what switching to them would take.
-- `forgot_password_screen.dart`'s reset now calls
-  `AppState.resetPasswordOnBackend` — a real (dev/demo-code) reset against
-  whatever account matches the typed email on the server, not just whatever
-  profile happens to be cached locally. If no backend is reachable at all
-  (a genuine connection failure, not a real rejection from a real server) it
-  falls back to the original fully-local demo behaviour.
+- The free-question/free-page paywall is enforced **server-side**, not just
+  by what the UI chooses to render: `lib/screens/exam_screen.dart` fetches
+  one question at a time through `AppState.fetchExamQuestion`
+  (`GET /api/exam/packs/:id/questions/:index`) instead of reading a bulk,
+  fully-trusting local list — a locked index comes back with no question
+  content at all, enforced against the user's *stored* progress. Same idea
+  for books: `lib/screens/ebook_reader_screen.dart` fetches gated content
+  through `AppState.fetchBookDetail` (`GET /api/books/:id`) rather than
+  trusting the catalog's bulk `books` list, which now only ever carries
+  metadata (title/cover/price/pageCount) for a non-admin session — see
+  backend/README.md's "The paywall" for the full picture, including why the
+  admin question-bank CRUD screens are unaffected (they legitimately need
+  full content, and only ever load in bulk for an admin session).
+- `forgot_password_screen.dart`'s reset calls
+  `AppState.resetPasswordOnBackend` — a real reset (dev/demo fixed code —
+  see backend/README.md's "Auth") against whatever account matches the
+  typed email on the server, not just whatever profile happens to be cached
+  locally. If no backend is reachable at all (a genuine connection failure,
+  not a real rejection from a real server) it falls back to the original
+  fully-local demo behaviour.
+- The backend itself has basic abuse protection now too (CORS restriction,
+  rate limiting on auth endpoints) — see backend/README.md's "Abuse
+  protection". It is **not** production-ready as one unit though — see its
+  "Not production-ready as-is" section for the concrete list (real hosting,
+  HTTPS, real email for password reset, the actual question content).
+- `lib/data/api_client.dart`'s base URL is overridable at build time
+  (`--dart-define=API_BASE_URL=https://...`) instead of hardcoded to
+  `localhost`/`10.0.2.2` — required for any build that isn't running against
+  a backend on the same machine.
 
-Covered by `test/backend_integration_test.dart` (7 tests against
+Covered by `test/backend_integration_test.dart` (11 tests against
 `test/support/fake_backend.dart`, an in-memory fake of the whole API — no
-real Mongo/Express needed for `flutter test`), `test/forgot_password_test.dart`
-(backend reset, wrong code, and the no-backend fallback), plus the fix to
-`test/signup_phone_test.dart` that came with wiring sign-up to the real call.
+real Mongo/Express needed for `flutter test`), `test/exam_online_test.dart`
+(the gated exam-question fetch, end to end through the real screen),
+`test/forgot_password_test.dart` (backend reset, wrong code, and the
+no-backend fallback), plus the fix to `test/signup_phone_test.dart` that
+came with wiring sign-up to the real call.
 
 ## Project layout
 
@@ -304,16 +449,19 @@ Everything moves. Key building blocks:
 
 ## Notes / next steps
 
-- The real device receipt/image pickers and the real backend (`AppState` ↔
-  `backend/`, persistence, real auth) are both done — see "Backend" above.
-- The paywall's server-side hardening (switching the exam/e-book reader to
-  the stricter, per-item `/api/exam/...` / `GET /api/books/:id` endpoints
-  instead of trusting bulk-fetched content, same as the client always did)
-  is built and curl-verified but not wired into the app — see
-  backend/README.md's "The paywall".
+- The real device receipt/image pickers, the real backend (`AppState` ↔
+  `backend/`, persistence, real auth), and server-side paywall enforcement
+  (the exam/e-book reader fetch gated content per-item now, instead of
+  trusting a bulk-fetched list — see "Backend" above) are all done.
 - `forgot_password_screen.dart` resets the real account's password on the
   backend, but there's still no real *email* flow behind it — the "code" is
   a fixed, publicly-known demo value (`1234`), not something actually
-  emailed (see `POST /api/auth/reset-password` in backend/README.md). No JWT
-  refresh either — the 30-day token just expires and drops back to a normal
-  login.
+  emailed (see `POST /api/auth/reset-password` in backend/README.md — this
+  is a real account-security gap, not just a missing nicety, until it's
+  replaced with a real emailed-token flow). No JWT refresh either — the
+  30-day token just expires and drops back to a normal login.
+- **Not ready to actually deploy** — see backend/README.md's "Not
+  production-ready as-is" for the concrete list: real hosting (right now
+  it's `localhost` against a local, auth-less `mongod`), HTTPS, real email
+  for password reset, and the real question-bank content (the seed data is
+  only a handful of real questions).
