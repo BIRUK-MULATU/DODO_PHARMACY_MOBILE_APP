@@ -28,7 +28,7 @@ returns `{"ok":true}` once it's up.
 
 ## Shape
 
-- `src/models/` — Mongoose schemas mirroring `../frontend/lib/data/models.dart`
+- `src/models/` — Mongoose schemas mirroring `../packages/dodomed_core/lib/data/models.dart`
   (`Track`, `ExamPack`, `Question`, `EBook`, `PaymentRequest`, `AboutInfo`,
   `Bank`, `User` — the real, persisted stand-in for `Profile`, which also
   carries `currentStreak`/`bestStreak`, `dailyActivity` (a date → count map,
@@ -90,12 +90,12 @@ it already has:
   everyone except an admin, who needs the full content to prefill the edit
   form.
 
-`../frontend/lib/data/app_state.dart` mirrors this split: `AppState.questions` only ever
+`../packages/dodomed_core/lib/data/app_state.dart` mirrors this split: `AppState.questions` only ever
 bulk-populates for an admin session (`_loadCatalog`); a learner's exam
 screen fetches one question at a time through `fetchExamQuestion`
-(`../frontend/lib/screens/exam_screen.dart`'s `_slotFor`/`_ensureLoaded`), and the e-book
+(`../apps/user_app/lib/screens/exam_screen.dart`'s `_slotFor`/`_ensureLoaded`), and the e-book
 reader fetches a book's real content through `fetchBookDetail`
-(`../frontend/lib/screens/ebook_reader_screen.dart`) instead of trusting the bulk list.
+(`../packages/dodomed_core/lib/screens/ebook_reader_screen.dart`) instead of trusting the bulk list.
 
 ## Dashboard data
 
@@ -254,7 +254,7 @@ deploying it for real users still needs, at minimum:
 - **Real hosting.** Right now it's `localhost` against a local `mongod`.
   Needs a real MongoDB (Atlas, or a self-hosted instance with auth enabled —
   this one has none) and a real server (with `--dart-define=API_BASE_URL=...`
-  pointed at it when building the app — see `../frontend/lib/data/api_client.dart`).
+  pointed at it when building the app — see `../packages/dodomed_core/lib/data/api_client.dart`).
 - **HTTPS.** Terminate TLS at the hosting layer (a platform's built-in
   HTTPS, or nginx + certbot on a VPS) — a real domain is a prerequisite.
 - **Real email for password reset** — see "Auth" above.
@@ -265,9 +265,9 @@ deploying it for real users still needs, at minimum:
 
 ## Wired into the app
 
-`../frontend/lib/data/app_state.dart` talks to this backend through
-`../frontend/lib/data/api_client.dart`. By default (`AppState.api == null`) it doesn't —
-the app runs fully offline against `../frontend/lib/data/mock_data.dart`, which is what
+`../packages/dodomed_core/lib/data/app_state.dart` talks to this backend through
+`../packages/dodomed_core/lib/data/api_client.dart`. By default (`AppState.api == null`) it doesn't —
+the app runs fully offline against `../packages/dodomed_core/lib/data/mock_data.dart`, which is what
 every pre-existing test exercises. `authSignUp`/`authLogin` (called from
 `login_screen.dart`/`signup_screen.dart`) and `tryAutoLogin` (called from
 `splash_screen.dart`) switch that same `AppState` into an online session:

@@ -1,0 +1,37 @@
+name: dodomed_core
+description: >
+  Shared data layer, design system, and cross-cutting screens for DODOMED's
+  two apps (user_app and admin_app) — AppState, the API client, mock data,
+  theme, reusable widgets, and the auth/splash/e-book-reader screens both
+  apps use. Not published; consumed via a local path dependency.
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  pdfx: ^2.11.0
+  path_provider: ^2.1.6
+  no_screenshot: ^1.2.0
+  file_selector: ^1.1.0
+  http: ^1.6.0
+  shared_preferences: ^2.5.5
+  # Regular (not dev) dependencies even though these two are only used by
+  # lib/test_support/ — that code ships as part of this package's public
+  # API (so both apps' own test/ suites can import it), and a consuming
+  # app's dependency resolution never sees another package's
+  # dev_dependencies.
+  file_selector_platform_interface: ^2.7.0
+  cross_file: ^0.3.5+5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
