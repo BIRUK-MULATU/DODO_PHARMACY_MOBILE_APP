@@ -10,7 +10,7 @@ class Entrance extends StatefulWidget {
     super.key,
     required this.child,
     this.delay = Duration.zero,
-    this.duration = const Duration(milliseconds: 500),
+    this.duration = const Duration(milliseconds: 320),
     this.offset = const Offset(0, 26),
     this.curve = Curves.easeOutCubic,
   });
@@ -75,8 +75,8 @@ class _EntranceState extends State<Entrance>
 /// Convenience: wrap each child of a column in a staggered [Entrance].
 List<Widget> staggered(
   List<Widget> children, {
-  Duration start = const Duration(milliseconds: 60),
-  Duration step = const Duration(milliseconds: 80),
+  Duration start = const Duration(milliseconds: 40),
+  Duration step = const Duration(milliseconds: 45),
 }) {
   return [
     for (var i = 0; i < children.length; i++)

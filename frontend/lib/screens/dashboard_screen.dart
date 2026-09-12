@@ -37,26 +37,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Offline there's only ever one local/demo learner — fetchRank already
     // short-circuits to `1 of 1` without a network call, so this is cheap
-    // and safe to always await.
-    try {
-      final rank = await state.fetchRank();
+    // and safe to always await. Fired in parallel with the activity fetch
+    // below (rather than one-after-the-other) so the dashboard only waits
+    // for the slower of the two round-trips, not both combined.
+    final rankFuture = state.fetchRank().then((rank) {
       if (mounted) setState(() => _rank = rank);
-    } catch (_) {
+    }).catchError((_) {
       // Leave _rank null — the stat card shows a loading placeholder
       // indefinitely rather than a wrong number.
-    }
+    });
 
-    if (state.isOnline) {
-      try {
-        final activity = await state.fetchDashboardActivity();
-        if (mounted) setState(() => _activity = activity);
-      } catch (_) {
-        if (mounted) setState(() => _activityFailed = true);
-      }
-    }
+    final activityFuture = state.isOnline
+        ? state.fetchDashboardActivity().then((activity) {
+            if (mounted) setState(() => _activity = activity);
+          }).catchError((_) {
+            if (mounted) setState(() => _activityFailed = true);
+          })
+        : Future<void>.value();
     // Offline: `_activity` stays null, and `_WeeklyBars`/`_RecentActivity`
     // fall back to their own sample/demo content — there's no persisted
     // history to fetch when nothing survives a restart anyway.
+
+    await Future.wait([rankFuture, activityFuture]);
   }
 
   @override

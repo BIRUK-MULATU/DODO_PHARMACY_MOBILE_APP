@@ -118,12 +118,12 @@ class AppDrawer extends StatelessWidget {
                           onTap: () => _navigate(context, item.route),
                         ),
                     ],
-                    start: const Duration(milliseconds: 130),
-                    step: const Duration(milliseconds: 65),
+                    start: const Duration(milliseconds: 70),
+                    step: const Duration(milliseconds: 35),
                   ),
                   const Spacer(),
                   Entrance(
-                    delay: const Duration(milliseconds: 420),
+                    delay: const Duration(milliseconds: 220),
                     child: PressScale(
                       onTap: () {
                         Navigator.of(context).pop();

@@ -93,18 +93,18 @@ class ResultsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Entrance(
-                  delay: const Duration(milliseconds: 200),
+                  delay: const Duration(milliseconds: 110),
                   child: CountUp(
                     value: args.correct,
                     suffix: ' / ${args.answered} correct',
-                    duration: const Duration(milliseconds: 1500),
+                    duration: const Duration(milliseconds: 900),
                     style: const TextStyle(
                         fontSize: 40, fontWeight: FontWeight.w900),
                   ),
                 ),
                 const SizedBox(height: 6),
                 Entrance(
-                  delay: const Duration(milliseconds: 350),
+                  delay: const Duration(milliseconds: 190),
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -121,7 +121,7 @@ class ResultsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Entrance(
-                  delay: const Duration(milliseconds: 500),
+                  delay: const Duration(milliseconds: 280),
                   child: Text(grade.label,
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -131,7 +131,7 @@ class ResultsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Entrance(
-                  delay: const Duration(milliseconds: 600),
+                  delay: const Duration(milliseconds: 330),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Text(grade.message,
@@ -146,7 +146,7 @@ class ResultsScreen extends StatelessWidget {
                 ),
                 Expanded(
                   child: Entrance(
-                    delay: const Duration(milliseconds: 350),
+                    delay: const Duration(milliseconds: 190),
                     offset: const Offset(0, 40),
                     child: Image.asset(Img.celebrateHero,
                         fit: BoxFit.contain),
@@ -155,7 +155,7 @@ class ResultsScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                   child: Entrance(
-                    delay: const Duration(milliseconds: 700),
+                    delay: const Duration(milliseconds: 380),
                     child: PrimaryButton(
                       label: 'Back to Home',
                       withLogo: true,

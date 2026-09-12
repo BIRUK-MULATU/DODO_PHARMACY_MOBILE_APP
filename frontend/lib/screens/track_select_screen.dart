@@ -53,7 +53,7 @@ class TrackSelectScreen extends StatelessWidget {
                   for (var i = 0; i < tracks.length; i++) ...[
                     if (i > 0) const SizedBox(height: 16),
                     Entrance(
-                      delay: Duration(milliseconds: 120 + i * 120),
+                      delay: Duration(milliseconds: 60 + i * 60),
                       child: _TrackCard(
                         figure: tracks[i].figure,
                         label: tracks[i].name,

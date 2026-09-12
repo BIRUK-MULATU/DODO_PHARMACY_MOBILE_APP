@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
       _authChecked = true;
       _maybeNext();
     });
-    _timer = Timer(const Duration(milliseconds: 2400), () {
+    _timer = Timer(const Duration(milliseconds: 1000), () {
       _minDelayDone = true;
       _maybeNext();
     });

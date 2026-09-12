@@ -68,23 +68,29 @@ class ApiClient {
     return body;
   }
 
+  static const _timeout = Duration(seconds: 8);
+
   Future<dynamic> get(String path, {Map<String, String>? query}) async {
-    final res = await _client.get(_uri(path, query), headers: _headers);
+    final res = await _client.get(_uri(path, query), headers: _headers).timeout(_timeout);
     return _decode(res);
   }
 
   Future<dynamic> post(String path, [Map<String, dynamic>? body]) async {
-    final res = await _client.post(_uri(path), headers: _headers, body: jsonEncode(body ?? {}));
+    final res = await _client
+        .post(_uri(path), headers: _headers, body: jsonEncode(body ?? {}))
+        .timeout(_timeout);
     return _decode(res);
   }
 
   Future<dynamic> put(String path, [Map<String, dynamic>? body]) async {
-    final res = await _client.put(_uri(path), headers: _headers, body: jsonEncode(body ?? {}));
+    final res = await _client
+        .put(_uri(path), headers: _headers, body: jsonEncode(body ?? {}))
+        .timeout(_timeout);
     return _decode(res);
   }
 
   Future<dynamic> delete(String path) async {
-    final res = await _client.delete(_uri(path), headers: _headers);
+    final res = await _client.delete(_uri(path), headers: _headers).timeout(_timeout);
     return _decode(res);
   }
 }
