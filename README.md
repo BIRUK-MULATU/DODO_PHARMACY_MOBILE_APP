@@ -1,20 +1,32 @@
 # DODOMED
 
-A study platform for the Ethiopian pharmacy exit exam / COC exam — a Flutter
-app (3,000+ MCQs, a premium e-book, a manual bank-transfer payment flow, an
-admin panel) backed by a Node/Express + MongoDB API.
+A study platform for the Ethiopian pharmacy exit exam / COC exam — 3,000+
+MCQs, a premium e-book, a manual bank-transfer payment flow — backed by a
+Node/Express + MongoDB API.
 
-This is a monorepo with two independent, sibling folders:
+This is a monorepo. **On this branch (`separeteUA`), the Admin and User
+experiences are two completely separate, independently buildable and
+deployable Flutter apps**, sharing one backend and one Dart package of
+common code:
 
 | Folder | What | Docs |
 |---|---|---|
-| [`frontend/`](frontend/) | The Flutter app | [`frontend/README.md`](frontend/README.md) |
-| [`backend/`](backend/) | The Node/Express + MongoDB API | [`backend/README.md`](backend/README.md) |
+| [`apps/user_app/`](apps/user_app/) | The learner-facing app (this is the original app — same package name, same Android/iOS identity) | [`apps/user_app/README.md`](apps/user_app/README.md) |
+| [`apps/admin_app/`](apps/admin_app/) | The staff-only admin app — a separate installable app (own `applicationId`/bundle id/app name: "DODOMED Admin") | [`apps/admin_app/README.md`](apps/admin_app/README.md) |
+| [`packages/dodomed_core/`](packages/dodomed_core/) | Shared Dart package: `AppState`, the API client, models, theme, reusable widgets, and the auth/splash/e-book-reader screens both apps use — consumed by both apps as a local path dependency | — |
+| [`backend/`](backend/) | The Node/Express + MongoDB API — unchanged, serves both apps identically | [`backend/README.md`](backend/README.md) |
 
-They used to live nested (`backend/` inside the Flutter project folder) —
-moved apart into these two top-level folders so each is a clean, independent
-codebase (its own dependencies, its own `.gitignore`), while staying in one
-repo/one git history.
+Neither app can log the other's account type in — logging into `user_app`
+with an admin account (or `admin_app` with a learner account) is rejected
+client-side with a message pointing at the right app. Both otherwise talk
+to the exact same backend.
+
+`apps/user_app` used to also contain every admin screen
+(`lib/screens/admin/`) directly; those moved out into `apps/admin_app`,
+and everything both apps needed (data layer, design system, a few
+shared screens) moved into `packages/dodomed_core` so neither app
+duplicates that logic. See each folder's own README for details specific
+to it.
 
 ## Quick start
 
@@ -23,18 +35,23 @@ repo/one git history.
 cd backend
 npm install && npm run seed && npm start
 
-# Frontend, in a separate terminal
-cd frontend
+# User app, in a separate terminal
+cd apps/user_app
 flutter pub get
 flutter run -d chrome   # or a device/emulator
+
+# Admin app, in a separate terminal
+cd apps/admin_app
+flutter pub get
+flutter run -d chrome
 ```
 
-The app also runs fully offline with no backend at all (seeded mock data) —
-see `frontend/README.md` for that mode and everything else: screen flow,
-architecture, testing, animations. See `backend/README.md` for the API's
-routes, the paywall model, auth, and what's still missing before a real
-deploy.
+Both apps also run fully offline with no backend at all (seeded mock
+data) — see each app's own README for that mode and everything else:
+screen flow, architecture, testing, animations. See `backend/README.md`
+for the API's routes, the paywall model, auth, and what's still missing
+before a real deploy.
 
 Seeded accounts once the backend is running: learner `asterali@gmail.com` /
-`12345`, admin `admin@dodomed.et` / `admin123` (any email starting with
-`admin` gets the admin role).
+`12345` (use in `user_app`), admin `admin@dodomed.et` / `admin123` (use in
+`admin_app`) — any email starting with `admin` gets the admin role.
